@@ -34,13 +34,19 @@ function wait(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+async function isHealthy(url) {
+  try {
+    const res = await fetch(`${url}/api/health`, { cache: "no-store" });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 async function waitForHealth(url, timeoutMs = 30000) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    try {
-      const res = await fetch(`${url}/api/health`, { cache: "no-store" });
-      if (res.ok) return;
-    } catch {}
+    if (await isHealthy(url)) return;
     await wait(800);
   }
   throw new Error(`Timed out waiting for ${url}/api/health`);
@@ -60,6 +66,7 @@ async function stopProcess(child) {
 
 async function main() {
   let dev = null;
+  let startedByScript = false;
   try {
     console.log("\n✅ Step 1/4: Env preflight");
     await run("node", ["scripts/preflight.mjs"]);
@@ -67,12 +74,18 @@ async function main() {
     console.log("\n✅ Step 2/4: Production build");
     await run("pnpm", ["build"]);
 
-    console.log("\n✅ Step 3/4: Start dev server");
-    dev = spawn("pnpm", ["dev"], {
-      stdio: "ignore",
-      shell: process.platform === "win32",
-    });
-    await waitForHealth(APP_ORIGIN, 30000);
+    const alreadyRunning = await isHealthy(APP_ORIGIN);
+    if (alreadyRunning) {
+      console.log("\n✅ Step 3/4: Reusing existing dev server");
+    } else {
+      console.log("\n✅ Step 3/4: Start dev server");
+      dev = spawn("pnpm", ["dev"], {
+        stdio: "ignore",
+        shell: process.platform === "win32",
+      });
+      startedByScript = true;
+      await waitForHealth(APP_ORIGIN, 30000);
+    }
 
     console.log("\n✅ Step 4/4: API smoke + privacy checks");
     await run("node", ["scripts/smoke.mjs"]);
@@ -80,7 +93,9 @@ async function main() {
 
     console.log("\n🎉 Demo verification passed. Ready for walkthrough.");
   } finally {
-    await stopProcess(dev);
+    if (startedByScript) {
+      await stopProcess(dev);
+    }
   }
 }
 
