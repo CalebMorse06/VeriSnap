@@ -105,6 +105,7 @@ pnpm retry-settlements
 ```
 
 Full step-by-step run guide: `../MORNING_RUNBOOK.md`
+Deploy guide: `../DEPLOY_CHECKLIST.md`
 
 ---
 
