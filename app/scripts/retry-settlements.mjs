@@ -96,7 +96,18 @@ async function main() {
         const prepared = await xrpl.autofill(tx);
         const signed = appWallet.sign(prepared);
         const result = await xrpl.submitAndWait(signed.tx_blob);
-        const hash = result.result.hash;
+
+        const txResult = result?.result;
+        const hash = txResult?.hash;
+        const engineResult = txResult?.meta?.TransactionResult || txResult?.engine_result;
+
+        if (!hash) {
+          throw new Error("Missing transaction hash from XRPL response");
+        }
+
+        if (engineResult !== "tesSUCCESS") {
+          throw new Error(`XRPL settlement not successful (${engineResult ?? "unknown"})`);
+        }
 
         const { error: updateErr } = await supabase
           .from("challenges")
