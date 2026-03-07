@@ -45,6 +45,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     updates.verification_confidence = Number(body.verificationResult.confidence ?? 0);
     updates.verification_reasoning = String(body.verificationResult.reasoning ?? "");
   }
+  if (body.resolvedAt !== undefined) updates.resolved_at = new Date(body.resolvedAt).toISOString();
+  if (body.visibility !== undefined) updates.visibility = body.visibility;
+  if (body.proofRevealed !== undefined) updates.proof_revealed = Boolean(body.proofRevealed);
 
   const { data, error } = await supabase.from("challenges").update(updates).eq("id", id).select("*").single();
   if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 });

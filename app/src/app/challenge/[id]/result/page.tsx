@@ -18,6 +18,7 @@ interface VerificationData {
   reasoning: string;
   proofCid?: string;
   settlementTx?: string;
+  settlementError?: string;
 }
 
 export default function ResultPage() {
@@ -127,6 +128,20 @@ export default function ResultPage() {
             prefix={passed ? "+" : "-"}
           />
         </motion.div>
+
+        {verification?.settlementError && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.12 }}
+            className="mb-6 p-4 rounded-xl bg-amber-50 border border-amber-200"
+          >
+            <p className="text-sm font-medium text-amber-800">Settlement Pending</p>
+            <p className="text-xs text-amber-700 mt-1">
+              Verification passed, but XRPL settlement is retrying. Please check back shortly.
+            </p>
+          </motion.div>
+        )}
 
         {/* Proof image */}
         {proofImage && (

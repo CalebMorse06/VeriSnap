@@ -23,6 +23,7 @@ interface VerificationResult {
   reasoning: string;
   proofCid?: string;
   settlementTx?: string;
+  settlementError?: string;
 }
 
 export default function VerifyPage() {
@@ -101,14 +102,21 @@ export default function VerifyPage() {
         reasoning: data.verification.reasoning,
         proofCid: data.proofCid,
         settlementTx: data.settlementTx,
+        settlementError: data.settlementError || undefined,
       };
 
       setResult(verification);
       setCurrentStep("complete");
 
       sessionStorage.setItem("verificationResult", JSON.stringify(verification));
+
+      const nextStatus = verification.passed
+        ? (verification.settlementTx ? "SETTLED" : "PASSED")
+        : "FAILED";
+
       updateChallenge(challengeId, {
-        status: "SETTLED",
+        status: nextStatus,
+        resolvedAt: Date.now(),
         proofCid: verification.proofCid,
         verificationResult: {
           passed: verification.passed,
