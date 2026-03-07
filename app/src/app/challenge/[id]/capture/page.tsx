@@ -3,8 +3,9 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, RefreshCw, X, Clock, AlertCircle, Zap } from "lucide-react";
+import { Camera, RefreshCw, X, Clock, AlertCircle, Zap, Upload } from "lucide-react";
 import { updateChallenge } from "@/lib/store/challenges";
+import { TrustBadge } from "@/components/ui/trust-badge";
 import { Button } from "@/components/ui/button";
 
 type CaptureState = "initializing" | "ready" | "countdown" | "captured" | "error";
@@ -192,11 +193,24 @@ export default function CapturePage() {
 
         {/* Captured image */}
         {capturedImage && state === "captured" && (
-          <img
-            src={capturedImage}
-            alt="Captured proof"
-            className="absolute inset-0 w-full h-full object-cover"
-          />
+          <div className="absolute inset-0">
+            <img
+              src={capturedImage}
+              alt="Captured proof"
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute top-4 left-4">
+              <TrustBadge variant="private" size="sm" animated={false} />
+            </div>
+            <div className="absolute bottom-24 left-1/2 -translate-x-1/2">
+              <div className="px-4 py-2 rounded-full bg-black/60 backdrop-blur-sm flex items-center gap-2">
+                <Upload className="w-4 h-4 text-purple-400" />
+                <p className="text-white text-sm font-medium">
+                  Ready to upload to Pinata
+                </p>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Hidden canvas for capture */}
