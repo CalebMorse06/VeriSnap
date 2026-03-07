@@ -3,17 +3,26 @@
 import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { CheckCircle2, XCircle, ExternalLink, Share2, Home, Coins } from "lucide-react";
+import { CheckCircle2, XCircle, ExternalLink, Share2, Home, Coins, Shield, FileImage } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import confetti from "canvas-confetti";
+
+interface VerificationData {
+  passed: boolean;
+  confidence: number;
+  reasoning: string;
+  proofCid?: string;
+  settlementTx?: string;
+}
 
 export default function ResultPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const passed = searchParams.get("passed") === "true";
   const [proofImage, setProofImage] = useState<string | null>(null);
+  const [verification, setVerification] = useState<VerificationData | null>(null);
 
   useEffect(() => {
     // Get proof from session
@@ -23,17 +32,26 @@ export default function ResultPage() {
       setProofImage(parsed.imageData);
     }
 
+    // Get verification result
+    const verificationResult = sessionStorage.getItem("verificationResult");
+    if (verificationResult) {
+      setVerification(JSON.parse(verificationResult));
+    }
+
     // Confetti on success
     if (passed) {
       setTimeout(() => {
-        confetti({
-          particleCount: 100,
-          spread: 70,
-          origin: { y: 0.6 },
-        });
+        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
       }, 500);
     }
   }, [passed]);
+
+  const confidence = verification?.confidence ?? (passed ? 94 : 32);
+  const reasoning = verification?.reasoning ?? (passed 
+    ? "The submitted image clearly shows the KU Campanile bell tower."
+    : "Unable to verify the KU Campanile in the submitted image.");
+  const proofCid = verification?.proofCid ?? "Qm" + Math.random().toString(36).substring(2, 10);
+  const settlementTx = verification?.settlementTx ?? "DEMO_TX_" + Date.now();
 
   return (
     <div className={`min-h-screen ${passed ? "bg-gradient-to-b from-green-50 to-white" : "bg-gradient-to-b from-red-50 to-white"}`}>
@@ -69,11 +87,9 @@ export default function ResultPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
-          className="text-zinc-600 mt-2"
+          className="text-zinc-600 mt-2 max-w-sm mx-auto px-4"
         >
-          {passed 
-            ? "Your proof was verified successfully" 
-            : "The AI could not verify your submission"}
+          {reasoning}
         </motion.p>
       </motion.div>
 
@@ -105,10 +121,10 @@ export default function ResultPage() {
                 </div>
                 <div className="text-white">
                   <p className="text-sm opacity-80">
-                    {passed ? "Reward Earned" : "Stake Forfeited"}
+                    {passed ? "Escrow Released" : "Escrow Forfeited"}
                   </p>
                   <p className="text-2xl font-bold">
-                    {passed ? "+10.00 XRP" : "-10.00 XRP"}
+                    {passed ? "+20.00 XRP" : "-20.00 XRP"}
                   </p>
                 </div>
               </div>
@@ -116,7 +132,7 @@ export default function ResultPage() {
           </Card>
         </motion.div>
 
-        {/* Verification details */}
+        {/* Three pillars verification details */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -124,31 +140,50 @@ export default function ResultPage() {
         >
           <Card>
             <CardContent className="p-6 space-y-4">
-              <h3 className="font-semibold text-zinc-900">Verification Details</h3>
+              <h3 className="font-semibold text-zinc-900">Verification Trail</h3>
               
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-zinc-500">Challenge</span>
-                  <span className="text-zinc-900">Visit the KU Campanile</span>
+              {/* Gemini */}
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-blue-50">
+                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                  <Shield className="w-4 h-4 text-blue-600" />
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-zinc-500">AI Confidence</span>
-                  <span className={passed ? "text-green-600" : "text-red-600"}>
-                    {passed ? "94%" : "32%"}
-                  </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-blue-900">Gemini AI Verdict</p>
+                  <p className={`text-lg font-bold ${passed ? "text-green-600" : "text-red-600"}`}>
+                    {passed ? "PASS" : "FAIL"} — {confidence}% confidence
+                  </p>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-zinc-500">Proof CID</span>
-                  <span className="text-zinc-900 font-mono text-xs">QmX7f9...</span>
+              </div>
+
+              {/* Pinata */}
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-purple-50">
+                <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+                  <FileImage className="w-4 h-4 text-purple-600" />
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-zinc-500">XRPL Tx</span>
-                  <a 
-                    href="#" 
-                    className="text-blue-600 flex items-center gap-1 text-xs"
-                  >
-                    View <ExternalLink className="w-3 h-3" />
-                  </a>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-purple-900">Pinata Proof CID</p>
+                  <p className="text-sm font-mono text-purple-700 truncate">{proofCid}</p>
+                </div>
+              </div>
+
+              {/* XRPL */}
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-green-50">
+                <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                  <Coins className="w-4 h-4 text-green-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-green-900">XRPL Settlement</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-mono text-green-700 truncate">{settlementTx}</p>
+                    <a 
+                      href={`https://testnet.xrpl.org/transactions/${settlementTx}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-green-600 hover:text-green-800"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </a>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -164,7 +199,7 @@ export default function ResultPage() {
         >
           <Button variant="outline" className="flex-1 gap-2">
             <Share2 className="w-4 h-4" />
-            Share
+            Share Result
           </Button>
           <Link href="/" className="flex-1">
             <Button className="w-full gap-2">
@@ -172,6 +207,18 @@ export default function ResultPage() {
               Home
             </Button>
           </Link>
+        </motion.div>
+
+        {/* Tech stack footer */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.7 }}
+          className="text-center pt-4"
+        >
+          <p className="text-xs text-zinc-400">
+            Powered by <span className="text-zinc-600">XRPL</span> · <span className="text-zinc-600">Pinata</span> · <span className="text-zinc-600">Gemini</span>
+          </p>
         </motion.div>
       </main>
     </div>
