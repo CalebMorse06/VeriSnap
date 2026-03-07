@@ -20,4 +20,6 @@ export const verifySchema = z.object({
   participantAddress: z.string().optional(),
   escrowOwner: z.string().optional(),
   escrowSequence: z.number().int().nonnegative().optional(),
+  capturedAt: z.number().int().positive().optional(),
+  acceptedAt: z.number().int().positive().optional(),
 });

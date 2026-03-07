@@ -76,21 +76,35 @@ export function validateProofImage(
 export async function validateProofServer(
   imageData: string,
   challengeId: string,
-  acceptedAt?: number
+  acceptedAt?: number,
+  capturedAt?: number
 ): Promise<ProofValidation> {
   const errors: string[] = [];
   const warnings: string[] = [];
   const metadata: ProofValidation["metadata"] = {};
 
+  // Check capture freshness
+  if (capturedAt) {
+    const ageSinceCapture = Date.now() - capturedAt;
+    if (ageSinceCapture > MAX_PROOF_AGE_MS) {
+      errors.push("Proof capture is too old. Please retake and submit within 30 minutes.");
+    } else if (ageSinceCapture > 15 * 60 * 1000) {
+      warnings.push("Proof capture is older than 15 minutes");
+    }
+    metadata.estimatedAge = formatAge(ageSinceCapture);
+  }
+
   // Check if challenge was accepted recently
   if (acceptedAt) {
     const timeSinceAccept = Date.now() - acceptedAt;
     const maxAllowedTime = 60 * 60 * 1000; // 1 hour max (generous)
-    
+
     if (timeSinceAccept > maxAllowedTime) {
       errors.push("Challenge timer has expired");
     }
-    metadata.estimatedAge = formatAge(timeSinceAccept);
+    if (!capturedAt) {
+      metadata.estimatedAge = formatAge(timeSinceAccept);
+    }
   }
 
   // Check image dimensions via canvas (would need browser environment)

@@ -35,15 +35,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { challengeId, imageData, challengeObjective, participantAddress, escrowOwner, escrowSequence } = parsed.data;
-    const acceptedAt = (parsed.data as VerifyRequest).acceptedAt;
+    const { challengeId, imageData, challengeObjective, participantAddress, escrowOwner, escrowSequence, acceptedAt, capturedAt } = parsed.data;
 
     if (imageData.length > 12_000_000) {
       return NextResponse.json({ success: false, error: "Image payload too large" }, { status: 413 });
     }
 
     // 0. Server-side proof validation
-    const proofValidation = await validateProofServer(imageData, challengeId, acceptedAt);
+    const proofValidation = await validateProofServer(imageData, challengeId, acceptedAt, capturedAt);
     if (!proofValidation.valid) {
       console.log("[Verify] Proof validation failed:", proofValidation.errors);
       return NextResponse.json({ 
