@@ -5,6 +5,7 @@ import { finishEscrow, Wallet } from "@/lib/xrpl";
 import { requireEnv } from "@/lib/env";
 import { verifySchema } from "@/lib/schemas";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { validateProofServer } from "@/lib/proof-validation";
 
 interface VerifyRequest {
   challengeId: string;
@@ -13,6 +14,8 @@ interface VerifyRequest {
   participantAddress?: string;
   escrowOwner?: string;
   escrowSequence?: number;
+  capturedAt?: number; // timestamp when photo was taken
+  acceptedAt?: number; // timestamp when challenge was accepted
 }
 
 export async function POST(request: NextRequest) {
@@ -33,9 +36,24 @@ export async function POST(request: NextRequest) {
     }
 
     const { challengeId, imageData, challengeObjective, participantAddress, escrowOwner, escrowSequence } = parsed.data;
+    const acceptedAt = (parsed.data as VerifyRequest).acceptedAt;
 
     if (imageData.length > 12_000_000) {
       return NextResponse.json({ success: false, error: "Image payload too large" }, { status: 413 });
+    }
+
+    // 0. Server-side proof validation
+    const proofValidation = await validateProofServer(imageData, challengeId, acceptedAt);
+    if (!proofValidation.valid) {
+      console.log("[Verify] Proof validation failed:", proofValidation.errors);
+      return NextResponse.json({ 
+        success: false, 
+        error: proofValidation.errors.join("; "),
+        validationErrors: proofValidation.errors,
+      }, { status: 400 });
+    }
+    if (proofValidation.warnings.length > 0) {
+      console.log("[Verify] Proof validation warnings:", proofValidation.warnings);
     }
 
     // 1. Upload proof to Pinata

@@ -46,14 +46,24 @@ export default function VerifyPage() {
       return;
     }
 
-    const parsed = JSON.parse(proofData);
+    const parsed = JSON.parse(proofData) as {
+      challengeId: string;
+      imageData: string;
+      capturedAt?: number;
+      acceptedAt?: number;
+    };
     setProofImage(parsed.imageData);
 
     updateChallenge(challengeId, { status: "VERIFYING" });
     runVerification(parsed);
   }, [challengeId]);
 
-  async function runVerification(proofData: { challengeId: string; imageData: string }) {
+  async function runVerification(proofData: { 
+    challengeId: string; 
+    imageData: string; 
+    capturedAt?: number;
+    acceptedAt?: number;
+  }) {
     try {
       setCurrentStep("uploading");
       await new Promise((r) => setTimeout(r, 800));
@@ -72,6 +82,8 @@ export default function VerifyPage() {
           challengeObjective,
           escrowOwner: challenge?.escrowOwner,
           escrowSequence: challenge?.escrowSequence,
+          capturedAt: proofData.capturedAt,
+          acceptedAt: proofData.acceptedAt,
         }),
       });
 
