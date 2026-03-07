@@ -85,6 +85,18 @@ pnpm dev
 
 Health check: http://localhost:3000/api/health
 
+### Morning demo commands
+
+```bash
+# One-command demo validation (build + health + smoke + privacy)
+pnpm verify-demo
+
+# Retry any pending XRPL settlements for PASSED challenges
+pnpm retry-settlements
+```
+
+Full step-by-step run guide: `../MORNING_RUNBOOK.md`
+
 ---
 
 ## 📁 Project Structure
