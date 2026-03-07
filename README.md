@@ -94,6 +94,9 @@ pnpm verify-demo
 # Instant readiness snapshot (health + pending settlement backlog)
 pnpm demo-status
 
+# Strict gate (fails if pending settlements > 0)
+VERISNAP_DEMO_STRICT=1 pnpm demo-status
+
 # Retry any pending XRPL settlements for PASSED challenges
 pnpm retry-settlements
 ```
