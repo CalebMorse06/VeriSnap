@@ -1,8 +1,65 @@
 @import "tailwindcss";
 
+/**
+ * VeriSnap Design System
+ * Premium, restrained, trustworthy — light mode only
+ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Backgrounds */
+  --vs-bg-primary: #fafafa;
+  --vs-bg-secondary: #f4f4f5;
+  --vs-bg-tertiary: #e4e4e7;
+
+  /* Surfaces */
+  --vs-surface: #ffffff;
+  --vs-surface-hover: #fafafa;
+  --vs-surface-pressed: #f4f4f5;
+
+  /* Text */
+  --vs-text-primary: #18181b;
+  --vs-text-secondary: #52525b;
+  --vs-text-tertiary: #a1a1aa;
+  --vs-text-inverse: #ffffff;
+
+  /* Borders */
+  --vs-border: #e4e4e7;
+  --vs-border-subtle: #f4f4f5;
+  --vs-border-hover: #d4d4d8;
+
+  /* Primary accent - Emerald */
+  --vs-accent: #059669;
+  --vs-accent-hover: #047857;
+  --vs-accent-pressed: #065f46;
+  --vs-accent-subtle: #d1fae5;
+  --vs-accent-text: #064e3b;
+
+  /* Success - Bright green */
+  --vs-success: #22c55e;
+  --vs-success-bg: #dcfce7;
+  --vs-success-text: #15803d;
+
+  /* Error - Muted red */
+  --vs-error: #dc2626;
+  --vs-error-bg: #fef2f2;
+  --vs-error-text: #b91c1c;
+
+  /* Warning - Amber */
+  --vs-warning: #f59e0b;
+  --vs-warning-bg: #fef3c7;
+  --vs-warning-text: #b45309;
+
+  /* Legacy Tailwind vars */
+  --background: var(--vs-bg-primary);
+  --foreground: var(--vs-text-primary);
+}
+
+/* Force light mode - no dark mode */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: var(--vs-bg-primary);
+    --foreground: var(--vs-text-primary);
+  }
 }
 
 @theme inline {
@@ -10,17 +67,51 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Custom colors for Tailwind */
+  --color-vs-accent: var(--vs-accent);
+  --color-vs-accent-hover: var(--vs-accent-hover);
+  --color-vs-success: var(--vs-success);
+  --color-vs-error: var(--vs-error);
+  --color-vs-warning: var(--vs-warning);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* Base styles */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--vs-bg-primary);
+  color: var(--vs-text-primary);
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Premium input focus states */
+input:focus,
+textarea:focus,
+select:focus,
+button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--vs-accent-subtle), 0 0 0 4px var(--vs-accent);
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Remove iOS input shadows */
+input,
+textarea {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Better button defaults */
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }

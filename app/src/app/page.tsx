@@ -5,13 +5,13 @@ import { ChallengeCard } from "@/components/challenge/ChallengeCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TrustPillars } from "@/components/ui/trust-badge";
-import { Plus, Zap, RotateCcw, Sparkles, Globe } from "lucide-react";
+import { Plus, RotateCcw, Activity, Globe } from "lucide-react";
 import { Challenge, ChallengeStatus } from "@/types/challenge";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { getChallenges } from "@/lib/store/challenges";
 
-function toUiChallenge(c: any): Challenge {
+function toUiChallenge(c: ReturnType<typeof getChallenges>[number]): Challenge {
   return {
     id: c.id,
     title: c.title,
@@ -38,7 +38,7 @@ export default function Home() {
         const res = await fetch("/api/challenges", { cache: "no-store" });
         const json = await res.json();
         if (mounted && res.ok && json.success && Array.isArray(json.challenges)) {
-          const mapped = json.challenges.map((c: any) => ({
+          const mapped = json.challenges.map((c: Record<string, unknown>) => ({
             id: c.id,
             title: c.title,
             description: c.description,
@@ -47,8 +47,8 @@ export default function Home() {
             stakeAmount: c.stake_amount_drops,
             creatorAddress: c.escrow_owner || c.creator_id,
             status: c.status as ChallengeStatus,
-            createdAt: new Date(c.created_at),
-            expiresAt: new Date(c.expires_at),
+            createdAt: new Date(c.created_at as string),
+            expiresAt: new Date(c.expires_at as string),
             xrpTxHash: c.escrow_tx_hash,
           } as Challenge));
           setChallenges(mapped);
@@ -73,36 +73,37 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50">
-      {/* Header */}
-      <header className="bg-white border-b border-zinc-100 sticky top-0 z-50 backdrop-blur-lg bg-white/80">
+    <div className="min-h-screen bg-[var(--vs-bg-primary)]">
+      {/* Header - clean, minimal */}
+      <header className="bg-white border-b border-[var(--vs-border)] sticky top-0 z-50">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <motion.div
-              initial={{ rotate: -10, scale: 0.9 }}
-              animate={{ rotate: 0, scale: 1 }}
-              className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/30"
-            >
-              <Zap className="w-5 h-5 text-white" />
-            </motion.div>
+            <div className="w-9 h-9 rounded-lg bg-emerald-600 flex items-center justify-center">
+              <Activity className="w-5 h-5 text-white" strokeWidth={2.5} />
+            </div>
             <div>
-              <h1 className="text-xl font-bold text-zinc-900">VeriSnap</h1>
-              <p className="text-[10px] text-zinc-500 font-medium -mt-0.5">XRPL • Pinata • Gemini</p>
+              <h1 className="text-lg font-semibold text-[var(--vs-text-primary)]">VeriSnap</h1>
+              <p className="text-[10px] text-[var(--vs-text-tertiary)] font-medium -mt-0.5 tracking-wide uppercase">Challenges</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <Link href="/feed">
-              <Button size="sm" variant="ghost" className="gap-1 text-zinc-500">
-                <Globe className="w-3.5 h-3.5" />
+              <Button size="sm" variant="ghost" className="text-[var(--vs-text-secondary)] hover:text-[var(--vs-text-primary)] hover:bg-zinc-100">
+                <Globe className="w-4 h-4" />
               </Button>
             </Link>
-            <Button size="sm" variant="ghost" className="gap-1 text-zinc-500" onClick={resetDemo}>
-              <RotateCcw className="w-3.5 h-3.5" />
+            <Button 
+              size="sm" 
+              variant="ghost" 
+              className="text-[var(--vs-text-tertiary)] hover:text-[var(--vs-text-secondary)] hover:bg-zinc-100" 
+              onClick={resetDemo}
+            >
+              <RotateCcw className="w-4 h-4" />
             </Button>
             <Link href="/challenge/create">
-              <Button size="sm" className="gap-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800">
+              <Button size="sm" className="ml-1 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium">
                 <Plus className="w-4 h-4" />
-                Create
+                New
               </Button>
             </Link>
           </div>
@@ -110,27 +111,17 @@ export default function Home() {
       </header>
 
       <main className="max-w-lg mx-auto px-4 py-6">
-        {/* Hero */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-6"
-        >
-          <h2 className="text-2xl font-bold text-zinc-900">Live Challenges</h2>
-          <p className="text-zinc-500 mt-1 text-sm">Stake XRP. Prove with AI. Settle on-chain.</p>
-        </motion.div>
+        {/* Section header */}
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-medium text-[var(--vs-text-secondary)] uppercase tracking-wide">
+            Active Challenges
+          </h2>
+          <span className="text-xs text-[var(--vs-text-tertiary)]">
+            {!loading && `${challenges.length} total`}
+          </span>
+        </div>
 
-        {/* Trust pillars */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.1 }}
-          className="mb-6"
-        >
-          <TrustPillars size="sm" />
-        </motion.div>
-
-        {/* Loading skeleton */}
+        {/* Content */}
         <AnimatePresence mode="wait">
           {loading ? (
             <motion.div
@@ -138,13 +129,16 @@ export default function Home() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="space-y-4"
+              className="space-y-3"
             >
               {[1, 2].map((i) => (
-                <div key={i} className="bg-white rounded-2xl p-4 space-y-3">
-                  <Skeleton className="h-24 w-full" />
-                  <Skeleton className="h-4 w-2/3" />
-                  <Skeleton className="h-10 w-full" />
+                <div key={i} className="bg-white rounded-xl border border-[var(--vs-border)] p-4 space-y-3">
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
+                  <div className="flex gap-2 pt-2">
+                    <Skeleton className="h-8 w-20" />
+                    <Skeleton className="h-8 w-20" />
+                  </div>
                 </div>
               ))}
             </motion.div>
@@ -155,13 +149,15 @@ export default function Home() {
               animate={{ opacity: 1 }}
               className="text-center py-16"
             >
-              <div className="w-16 h-16 rounded-full bg-zinc-100 flex items-center justify-center mx-auto mb-4">
-                <Sparkles className="w-8 h-8 text-zinc-400" />
+              <div className="w-14 h-14 rounded-full bg-zinc-100 flex items-center justify-center mx-auto mb-4">
+                <Activity className="w-6 h-6 text-zinc-400" />
               </div>
-              <h3 className="text-lg font-semibold text-zinc-700">No challenges yet</h3>
-              <p className="text-zinc-500 text-sm mt-1">Create your first challenge to get started</p>
+              <h3 className="text-base font-medium text-[var(--vs-text-primary)]">No active challenges</h3>
+              <p className="text-[var(--vs-text-secondary)] text-sm mt-1">Create your first challenge to get started.</p>
               <Link href="/challenge/create">
-                <Button className="mt-4">Create Challenge</Button>
+                <Button className="mt-6 bg-emerald-600 hover:bg-emerald-700 text-white">
+                  Create Challenge
+                </Button>
               </Link>
             </motion.div>
           ) : (
@@ -169,14 +165,14 @@ export default function Home() {
               key="list"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="space-y-4"
+              className="space-y-3"
             >
               {challenges.map((challenge, index) => (
                 <motion.div
                   key={challenge.id}
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
+                  transition={{ delay: index * 0.03 }}
                 >
                   <ChallengeCard
                     challenge={challenge}
@@ -189,36 +185,13 @@ export default function Home() {
           )}
         </AnimatePresence>
 
-        {/* How it works */}
-        {!loading && challenges.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="mt-8 p-5 bg-white rounded-2xl border border-zinc-100"
-          >
-            <h3 className="font-semibold text-zinc-900 mb-4 flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-xs">?</span>
-              How It Works
-            </h3>
-            <ol className="space-y-3 text-sm">
-              {[
-                { step: "1", text: "Accept challenge → XRP locks in XRPL escrow", color: "emerald" },
-                { step: "2", text: "Complete task before timer expires", color: "orange" },
-                { step: "3", text: "Capture proof → uploads privately to Pinata", color: "purple" },
-                { step: "4", text: "Gemini AI verifies your submission", color: "blue" },
-                { step: "5", text: "Pass = escrow released. Fail = forfeited.", color: "zinc" },
-              ].map((item) => (
-                <li key={item.step} className="flex gap-3">
-                  <span className={`w-6 h-6 rounded-full bg-${item.color}-100 text-${item.color}-700 flex items-center justify-center text-xs font-bold flex-shrink-0`}>
-                    {item.step}
-                  </span>
-                  <span className="text-zinc-600">{item.text}</span>
-                </li>
-              ))}
-            </ol>
-          </motion.div>
-        )}
+        {/* Footer */}
+        <div className="mt-10 pt-6 border-t border-[var(--vs-border-subtle)]">
+          <TrustPillars />
+          <p className="text-center text-xs text-[var(--vs-text-tertiary)] mt-4">
+            Stake XRP • Submit proof • AI verifies • Settle on-chain
+          </p>
+        </div>
       </main>
     </div>
   );

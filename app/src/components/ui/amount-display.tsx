@@ -1,25 +1,29 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Coins } from "lucide-react";
 
 interface AmountDisplayProps {
   drops: number;
   variant?: "default" | "large" | "inline";
-  showIcon?: boolean;
+  showSymbol?: boolean;
   prefix?: "+" | "-" | "";
 }
 
-export function AmountDisplay({ drops, variant = "default", showIcon = true, prefix = "" }: AmountDisplayProps) {
-  const xrp = (drops / 1_000_000).toFixed(2);
+export function AmountDisplay({ drops, variant = "default", showSymbol = true, prefix = "" }: AmountDisplayProps) {
+  const xrp = drops / 1_000_000;
+  const formatted = xrp % 1 === 0 ? xrp.toString() : xrp.toFixed(2);
+
+  const getColorClass = () => {
+    if (prefix === "+") return "text-green-600";
+    if (prefix === "-") return "text-red-600";
+    return "text-[var(--vs-text-primary)]";
+  };
 
   if (variant === "inline") {
     return (
-      <span className="inline-flex items-center gap-1 font-semibold">
-        {showIcon && <Coins className="w-3.5 h-3.5 text-emerald-500" />}
-        <span className={prefix === "+" ? "text-green-600" : prefix === "-" ? "text-red-600" : "text-zinc-900"}>
-          {prefix}{xrp} XRP
-        </span>
+      <span className={`inline-flex items-baseline gap-1 font-semibold ${getColorClass()}`}>
+        <span>{prefix}{formatted}</span>
+        {showSymbol && <span className="text-[var(--vs-text-tertiary)] text-xs font-medium">XRP</span>}
       </span>
     );
   }
@@ -27,31 +31,38 @@ export function AmountDisplay({ drops, variant = "default", showIcon = true, pre
   if (variant === "large") {
     return (
       <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
+        initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className="flex items-center justify-center gap-3"
+        className="text-center"
       >
-        {showIcon && (
-          <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
-            <Coins className="w-6 h-6 text-emerald-600" />
-          </div>
+        <p className={`text-4xl font-semibold tracking-tight ${getColorClass()}`}>
+          {prefix}{formatted}
+        </p>
+        {showSymbol && (
+          <p className="text-sm text-[var(--vs-text-tertiary)] font-medium mt-1">XRP</p>
         )}
-        <div>
-          <p className={`text-3xl font-bold ${prefix === "+" ? "text-green-600" : prefix === "-" ? "text-red-600" : "text-zinc-900"}`}>
-            {prefix}{xrp} XRP
-          </p>
-          <p className="text-xs text-zinc-500 font-medium">XRPL Testnet</p>
-        </div>
       </motion.div>
     );
   }
 
   return (
-    <div className="flex items-center gap-2">
-      {showIcon && <Coins className="w-4 h-4 text-emerald-500" />}
-      <span className={`font-semibold ${prefix === "+" ? "text-green-600" : prefix === "-" ? "text-red-600" : "text-zinc-900"}`}>
-        {prefix}{xrp} XRP
-      </span>
+    <div className={`inline-flex items-baseline gap-1 font-medium ${getColorClass()}`}>
+      <span>{prefix}{formatted}</span>
+      {showSymbol && <span className="text-[var(--vs-text-tertiary)] text-xs">XRP</span>}
     </div>
+  );
+}
+
+/**
+ * Compact XRP display for tight spaces
+ */
+export function XrpAmount({ drops, className = "" }: { drops: number; className?: string }) {
+  const xrp = drops / 1_000_000;
+  const formatted = xrp % 1 === 0 ? xrp.toString() : xrp.toFixed(2);
+  
+  return (
+    <span className={`font-medium ${className}`}>
+      {formatted} <span className="text-[var(--vs-text-tertiary)]">XRP</span>
+    </span>
   );
 }
