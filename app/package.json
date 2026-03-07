@@ -11,7 +11,8 @@
     "smoke": "node scripts/smoke.mjs",
     "privacy-check": "node scripts/privacy-check.mjs",
     "verify-demo": "node scripts/verify-demo.mjs",
-    "retry-settlements": "node scripts/retry-settlements.mjs"
+    "retry-settlements": "node scripts/retry-settlements.mjs",
+    "demo-status": "node scripts/demo-status.mjs"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

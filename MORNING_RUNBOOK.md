@@ -18,18 +18,23 @@ What this does:
 - smoke checks
 - privacy checks
 
-## 3) Optional: retry any pending XRPL settlements
+## 3) Quick readiness snapshot
+```bash
+pnpm demo-status
+```
+
+## 4) Optional: retry any pending XRPL settlements
 ```bash
 pnpm retry-settlements
 ```
 
-## 4) Start app for live walkthrough
+## 5) Start app for live walkthrough
 ```bash
 pnpm dev
 ```
 Open: http://localhost:3000
 
-## 5) 90-second demo order
+## 6) 90-second demo order
 1. Create challenge (show escrow lock)
 2. Accept challenge (timer starts)
 3. Capture proof (private)
@@ -38,13 +43,13 @@ Open: http://localhost:3000
 6. Share option (private/friends/public)
 7. Public feed (if revealed)
 
-## 6) If anything fails
+## 7) If anything fails
 - XRPL settlement pending: run `pnpm retry-settlements`
 - API sanity: `pnpm smoke`
 - Privacy sanity: `pnpm privacy-check`
 - Full check: `pnpm verify-demo`
 
-## 7) Judge talking points (quick)
+## 8) Judge talking points (quick)
 - XRPL escrow is real testnet tx, not mocked
 - Proof is private by default and owner-controlled reveal
 - AI verification includes fraud-aware checks
