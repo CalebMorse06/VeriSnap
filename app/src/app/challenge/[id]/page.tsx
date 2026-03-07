@@ -40,6 +40,7 @@ export default function ChallengePage() {
             durationMinutes: c.duration_minutes,
             creatorAddress: c.escrow_owner || c.creator_id,
             status: c.status,
+            visibility: c.visibility || "private",
             createdAt: new Date(c.created_at).getTime(),
             expiresAt: new Date(c.expires_at).getTime(),
             escrowTxHash: c.escrow_tx_hash,

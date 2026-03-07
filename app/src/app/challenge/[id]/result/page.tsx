@@ -11,7 +11,8 @@ import { AmountDisplay } from "@/components/ui/amount-display";
 import { VerificationTrail } from "@/components/ui/verification-trail";
 import Link from "next/link";
 import confetti from "canvas-confetti";
-import { getChallenge, updateChallenge } from "@/lib/store/challenges";
+import { getChallenge, updateChallenge, type ChallengeVisibility } from "@/lib/store/challenges";
+import { ShareOptions } from "@/components/challenge/ShareOptions";
 
 interface VerificationData {
   passed: boolean;
@@ -170,21 +171,29 @@ export default function ResultPage() {
           </Card>
         </motion.div>
 
-        {/* Actions */}
+        {/* Share options */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="flex gap-3"
         >
-          <Button variant="outline" className="flex-1 gap-2 h-12 rounded-xl">
-            <Share2 className="w-4 h-4" />
-            Share
-          </Button>
-          <Link href="/" className="flex-1">
+          <ShareOptions
+            challengeId={challengeId}
+            currentVisibility={challenge?.visibility ?? "private"}
+            onVisibilityChange={(v: ChallengeVisibility) => updateChallenge(challengeId, { visibility: v })}
+          />
+        </motion.div>
+
+        {/* Home button */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.55 }}
+        >
+          <Link href="/">
             <Button className="w-full gap-2 h-12 rounded-xl bg-zinc-900 hover:bg-zinc-800">
               <Home className="w-4 h-4" />
-              Home
+              Back to Home
             </Button>
           </Link>
         </motion.div>

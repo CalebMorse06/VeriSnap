@@ -5,7 +5,7 @@ import { ChallengeCard } from "@/components/challenge/ChallengeCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TrustPillars } from "@/components/ui/trust-badge";
-import { Plus, Zap, RotateCcw, Sparkles } from "lucide-react";
+import { Plus, Zap, RotateCcw, Sparkles, Globe } from "lucide-react";
 import { Challenge, ChallengeStatus } from "@/types/challenge";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
@@ -91,6 +91,11 @@ export default function Home() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Link href="/feed">
+              <Button size="sm" variant="ghost" className="gap-1 text-zinc-500">
+                <Globe className="w-3.5 h-3.5" />
+              </Button>
+            </Link>
             <Button size="sm" variant="ghost" className="gap-1 text-zinc-500" onClick={resetDemo}>
               <RotateCcw className="w-3.5 h-3.5" />
             </Button>

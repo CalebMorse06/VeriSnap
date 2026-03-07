@@ -20,6 +20,7 @@ const FALLBACK: ChallengeData = {
   durationMinutes: 20,
   creatorAddress: "rDemo",
   status: "FUNDED",
+  visibility: "private",
   createdAt: Date.now(),
   expiresAt: Date.now() + 86400000,
 };

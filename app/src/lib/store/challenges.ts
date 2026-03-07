@@ -1,6 +1,8 @@
 // Simple client-side challenge store using sessionStorage
 // In production, this would be backed by a database
 
+export type ChallengeVisibility = "private" | "friends" | "public";
+
 export interface ChallengeData {
   id: string;
   title: string;
@@ -10,15 +12,18 @@ export interface ChallengeData {
   stakeAmount: number; // in drops
   durationMinutes: number;
   creatorAddress: string;
-  status: "DRAFT" | "FUNDED" | "ACCEPTED" | "PROOF_SUBMITTED" | "VERIFYING" | "PASSED" | "FAILED" | "SETTLED";
+  status: "DRAFT" | "FUNDED" | "ACCEPTED" | "PROOF_SUBMITTED" | "VERIFYING" | "PASSED" | "FAILED" | "SETTLED" | "EXPIRED";
+  visibility: ChallengeVisibility;
   createdAt: number;
   expiresAt: number;
   acceptedAt?: number;
+  resolvedAt?: number;
   escrowSequence?: number;
   escrowTxHash?: string;
   escrowOwner?: string;
   proofCid?: string;
   proofUrl?: string;
+  proofRevealed?: boolean;
   verificationResult?: {
     passed: boolean;
     confidence: number;
@@ -41,6 +46,7 @@ const DEMO_CHALLENGES: ChallengeData[] = [
     durationMinutes: 20,
     creatorAddress: "rVeriSnapDemo123",
     status: "FUNDED",
+    visibility: "private",
     createdAt: Date.now() - 3600000,
     expiresAt: Date.now() + 86400000,
   },
@@ -105,11 +111,12 @@ export function updateChallenge(id: string, updates: Partial<ChallengeData>): Ch
   return updated;
 }
 
-export function createChallenge(data: Omit<ChallengeData, "id" | "status" | "createdAt" | "expiresAt">): ChallengeData {
+export function createChallenge(data: Omit<ChallengeData, "id" | "status" | "createdAt" | "expiresAt" | "visibility">): ChallengeData {
   const challenge: ChallengeData = {
     ...data,
     id: `challenge-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
     status: "FUNDED",
+    visibility: "private", // Default to private
     createdAt: Date.now(),
     expiresAt: Date.now() + 86400000, // 24 hours
   };

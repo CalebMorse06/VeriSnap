@@ -12,13 +12,16 @@ create table if not exists challenges (
   stake_amount_drops bigint not null,
   duration_minutes integer not null,
   status text not null,
+  visibility text not null default 'private', -- private | friends | public
   created_at timestamptz not null default now(),
   expires_at timestamptz not null,
   accepted_at timestamptz,
+  resolved_at timestamptz,
   escrow_sequence integer,
   escrow_tx_hash text,
   escrow_owner text,
   proof_cid text,
+  proof_revealed boolean not null default false,
   settlement_tx text,
   verification_passed boolean,
   verification_confidence integer,
@@ -28,3 +31,10 @@ create table if not exists challenges (
 create index if not exists challenges_status_idx on challenges(status);
 create index if not exists challenges_creator_id_idx on challenges(creator_id);
 create index if not exists challenges_created_at_idx on challenges(created_at desc);
+create index if not exists challenges_public_feed_idx on challenges(visibility, status, resolved_at desc) 
+  where visibility = 'public' and status in ('VERIFIED', 'FAILED');
+
+-- Migration for existing tables (run if upgrading)
+-- ALTER TABLE challenges ADD COLUMN IF NOT EXISTS visibility text NOT NULL DEFAULT 'private';
+-- ALTER TABLE challenges ADD COLUMN IF NOT EXISTS resolved_at timestamptz;
+-- ALTER TABLE challenges ADD COLUMN IF NOT EXISTS proof_revealed boolean NOT NULL DEFAULT false;
