@@ -91,6 +91,9 @@ Health check: http://localhost:3000/api/health
 # One-command demo validation (build + health + smoke + privacy)
 pnpm verify-demo
 
+# Instant readiness snapshot (health + pending settlement backlog)
+pnpm demo-status
+
 # Retry any pending XRPL settlements for PASSED challenges
 pnpm retry-settlements
 ```
