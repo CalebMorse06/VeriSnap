@@ -73,12 +73,28 @@ export async function POST(request: NextRequest) {
 
     // 3. Settle on XRPL (if passed and escrow details are provided)
     let settlementTx: string | null = null;
+    let settlementError: string | null = null;
+    
     if (verification.passed && escrowOwner && typeof escrowSequence === "number") {
       console.log("[Verify] Settling on XRPL via EscrowFinish...");
       const seed = requireEnv("XRPL_APP_WALLET_SEED");
       const appWallet = Wallet.fromSeed(seed);
-      settlementTx = await finishEscrow(appWallet, escrowOwner, escrowSequence, challengeId);
-      console.log("[Verify] Settlement:", settlementTx);
+      
+      // Retry settlement up to 3 times
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          settlementTx = await finishEscrow(appWallet, escrowOwner, escrowSequence, challengeId);
+          console.log("[Verify] Settlement successful:", settlementTx);
+          break;
+        } catch (err) {
+          console.error(`[Verify] Settlement attempt ${attempt} failed:`, err);
+          if (attempt === 3) {
+            settlementError = `Settlement failed after 3 attempts: ${String(err)}`;
+          } else {
+            await new Promise(r => setTimeout(r, 1000 * attempt)); // Exponential backoff
+          }
+        }
+      }
     }
 
     return NextResponse.json({
@@ -87,6 +103,7 @@ export async function POST(request: NextRequest) {
       proofUrl: upload.privateUrl,
       verification,
       settlementTx,
+      settlementError,
     });
   } catch (error) {
     console.error("[Verify] Error:", error);
