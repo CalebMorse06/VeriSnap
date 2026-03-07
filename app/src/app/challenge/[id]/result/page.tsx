@@ -10,7 +10,7 @@ import { AmountDisplay } from "@/components/ui/amount-display";
 import { ShareOptions } from "@/components/challenge/ShareOptions";
 import Link from "next/link";
 import confetti from "canvas-confetti";
-import { getChallenge, updateChallenge, type ChallengeVisibility } from "@/lib/store/challenges";
+import { getChallenge, updateChallenge, type ChallengeVisibility, type ChallengeData } from "@/lib/store/challenges";
 
 interface VerificationData {
   passed: boolean;
@@ -25,12 +25,52 @@ export default function ResultPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const challengeId = params.id as string;
-  const challenge = getChallenge(challengeId);
   const passed = searchParams.get("passed") === "true";
+  const [challenge, setChallenge] = useState<ChallengeData | null>(getChallenge(challengeId));
   const [proofImage, setProofImage] = useState<string | null>(null);
   const [verification, setVerification] = useState<VerificationData | null>(null);
 
   useEffect(() => {
+    let mounted = true;
+
+    // Pull freshest server state for settlement/privacy accuracy
+    (async () => {
+      try {
+        const res = await fetch(`/api/challenges/${challengeId}`, { cache: "no-store" });
+        const json = await res.json();
+        if (mounted && res.ok && json.success && json.challenge) {
+          const c = json.challenge;
+          setChallenge({
+            id: c.id,
+            title: c.title,
+            description: c.description,
+            objective: c.objective,
+            location: { name: c.location_name, lat: c.location_lat, lng: c.location_lng },
+            stakeAmount: c.stake_amount_drops,
+            durationMinutes: c.duration_minutes,
+            creatorAddress: c.escrow_owner || c.creator_id,
+            status: c.status,
+            visibility: c.visibility || "private",
+            createdAt: new Date(c.created_at).getTime(),
+            expiresAt: new Date(c.expires_at).getTime(),
+            acceptedAt: c.accepted_at ? new Date(c.accepted_at).getTime() : undefined,
+            resolvedAt: c.resolved_at ? new Date(c.resolved_at).getTime() : undefined,
+            escrowTxHash: c.escrow_tx_hash,
+            escrowSequence: c.escrow_sequence,
+            escrowOwner: c.escrow_owner,
+            proofCid: c.proof_cid ?? undefined,
+            proofRevealed: c.proof_revealed,
+            settlementTx: c.settlement_tx ?? undefined,
+            verificationResult: c.verification_passed === null ? undefined : {
+              passed: Boolean(c.verification_passed),
+              confidence: Number(c.verification_confidence ?? 0),
+              reasoning: String(c.verification_reasoning ?? ""),
+            },
+          });
+        }
+      } catch {}
+    })();
+
     updateChallenge(challengeId, { status: "SETTLED" });
 
     const proofData = sessionStorage.getItem("proofData");
@@ -49,6 +89,8 @@ export default function ResultPage() {
         confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
       }, 500);
     }
+
+    return () => { mounted = false; };
   }, [passed, challengeId]);
 
   const confidence = verification?.confidence ?? (passed ? 94 : 32);
@@ -208,7 +250,10 @@ export default function ResultPage() {
           <ShareOptions
             challengeId={challengeId}
             currentVisibility={challenge?.visibility ?? "private"}
-            onVisibilityChange={(v: ChallengeVisibility) => updateChallenge(challengeId, { visibility: v })}
+            onVisibilityChange={(v: ChallengeVisibility) => {
+              updateChallenge(challengeId, { visibility: v, proofRevealed: v !== "private" });
+              setChallenge((prev) => prev ? { ...prev, visibility: v, proofRevealed: v !== "private" } : prev);
+            }}
           />
         </motion.div>
 
