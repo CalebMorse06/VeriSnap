@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { getOrSetUserId } from "@/lib/identity";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const ip = getClientIp(request.headers);
+  const rl = checkRateLimit(`challenges-list:${ip}`, 120, 60_000);
+  if (!rl.allowed) {
+    return NextResponse.json({ success: false, error: "Rate limit exceeded" }, { status: 429 });
+  }
+
   const supabase = getSupabaseAdmin();
   if (!supabase) {
     return NextResponse.json({ success: false, error: "Supabase not configured" }, { status: 503 });
@@ -22,6 +29,12 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request.headers);
+  const rl = checkRateLimit(`challenges-create:${ip}`, 60, 60_000);
+  if (!rl.allowed) {
+    return NextResponse.json({ success: false, error: "Rate limit exceeded" }, { status: 429 });
+  }
+
   const supabase = getSupabaseAdmin();
   if (!supabase) {
     return NextResponse.json({ success: false, error: "Supabase not configured" }, { status: 503 });

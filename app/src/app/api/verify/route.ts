@@ -4,6 +4,7 @@ import { verifyProof } from "@/lib/gemini";
 import { finishEscrow, Wallet } from "@/lib/xrpl";
 import { requireEnv } from "@/lib/env";
 import { verifySchema } from "@/lib/schemas";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 interface VerifyRequest {
   challengeId: string;
@@ -16,6 +17,12 @@ interface VerifyRequest {
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = getClientIp(request.headers);
+    const rl = checkRateLimit(`verify:${ip}`, 20, 60_000);
+    if (!rl.allowed) {
+      return NextResponse.json({ success: false, error: "Rate limit exceeded" }, { status: 429 });
+    }
+
     const body: VerifyRequest = await request.json();
     const parsed = verifySchema.safeParse(body);
     if (!parsed.success) {
@@ -26,6 +33,10 @@ export async function POST(request: NextRequest) {
     }
 
     const { challengeId, imageData, challengeObjective, participantAddress, escrowOwner, escrowSequence } = parsed.data;
+
+    if (imageData.length > 12_000_000) {
+      return NextResponse.json({ success: false, error: "Image payload too large" }, { status: 413 });
+    }
 
     // 1. Upload proof to Pinata
     console.log("[Verify] Uploading to Pinata...");

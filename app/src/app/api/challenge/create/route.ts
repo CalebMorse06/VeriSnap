@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createEscrow, Wallet } from "@/lib/xrpl";
 import { requireEnv } from "@/lib/env";
 import { createChallengeSchema } from "@/lib/schemas";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 interface CreateChallengeRequest {
   title: string;
@@ -14,6 +15,12 @@ interface CreateChallengeRequest {
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = getClientIp(request.headers);
+    const rl = checkRateLimit(`challenge-create:${ip}`, 30, 60_000);
+    if (!rl.allowed) {
+      return NextResponse.json({ success: false, error: "Rate limit exceeded" }, { status: 429 });
+    }
+
     const body: CreateChallengeRequest = await request.json();
     const parsed = createChallengeSchema.safeParse(body);
     if (!parsed.success) {
