@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ChevronLeft, MapPin, Clock, Coins, Zap, Sparkles, AlertCircle } from "lucide-react";
+import { ChevronLeft, MapPin, Clock, Zap, Sparkles, AlertCircle, Lock, Loader2, Coins } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { TrustBadge, TrustPillars } from "@/components/ui/trust-badge";
+import { AmountDisplay } from "@/components/ui/amount-display";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { createChallenge, updateChallenge } from "@/lib/store/challenges";
@@ -300,16 +302,19 @@ export default function CreateChallengePage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <Card className="mb-6 bg-green-50 border-green-200">
+          <Card className="mb-6 bg-gradient-to-br from-emerald-50 to-white border-emerald-200">
             <CardContent className="p-4">
               <div className="flex gap-3">
-                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                  <Coins className="w-5 h-5 text-green-600" />
+                <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                  <Lock className="w-6 h-6 text-emerald-600" />
                 </div>
                 <div>
-                  <p className="font-medium text-green-900">XRPL Escrow</p>
-                  <p className="text-sm text-green-700">
-                    Your stake will be locked in an XRPL escrow contract with automatic settlement based on AI verification.
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="font-semibold text-emerald-900">XRPL Escrow</p>
+                    <TrustBadge variant="xrpl" size="sm" animated={false} />
+                  </div>
+                  <p className="text-sm text-emerald-700 leading-relaxed">
+                    Stake locks in an on-chain escrow contract. Settlement is automatic and trustless based on Gemini AI verification.
                   </p>
                 </div>
               </div>
@@ -340,22 +345,35 @@ export default function CreateChallengePage() {
         >
           <Button
             size="lg"
-            className="w-full text-lg h-14 gap-2"
+            className="w-full text-lg h-14 gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg shadow-purple-500/20"
             onClick={handleCreate}
             disabled={isCreating || (!preset && !isCustom)}
           >
             {isCreating ? (
               <>
-                <span className="animate-spin">⚡</span>
-                Creating Escrow...
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Creating XRPL Escrow...
               </>
             ) : (
               <>
-                <Zap className="w-5 h-5" />
-                Create Challenge
+                <Lock className="w-5 h-5" />
+                Create & Lock Stake
               </>
             )}
           </Button>
+          <p className="text-center text-xs text-zinc-500 mt-3">
+            Stake will be locked in XRPL escrow until challenge resolves
+          </p>
+        </motion.div>
+
+        {/* Trust footer */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.35 }}
+          className="pt-4"
+        >
+          <TrustPillars size="sm" />
         </motion.div>
       </main>
     </div>
