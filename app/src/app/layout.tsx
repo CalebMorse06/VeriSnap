@@ -15,6 +15,12 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "VeriSnap — Real-World Challenges on XRPL",
   description: "Accept challenges, submit live proof, win XRP. Powered by XRPL Escrow, Pinata IPFS, and Gemini AI.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "VeriSnap",
+  },
   openGraph: {
     title: "VeriSnap",
     description: "Real-world challenges backed by XRP escrow",
@@ -30,6 +36,8 @@ export const viewport: Viewport = {
   themeColor: "#18181b",
 };
 
+import { InstallPrompt } from "@/components/pwa/InstallPrompt";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -41,6 +49,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
+        <InstallPrompt />
       </body>
     </html>
   );

@@ -21,39 +21,45 @@ export default function ChallengePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const stored = getChallenge(challengeId);
-    if (stored) {
-      setChallenge(stored);
-      setLoading(false);
-    } else {
-      // Try fetch from API
-      (async () => {
-        try {
-          const res = await fetch(`/api/challenges/${challengeId}`);
-          const json = await res.json();
-          if (json.success && json.challenge) {
-            const c = json.challenge;
-            setChallenge({
-              id: c.id,
-              title: c.title,
-              description: c.description,
-              objective: c.objective,
-              location: { name: c.location_name, lat: c.location_lat, lng: c.location_lng },
-              stakeAmount: c.stake_amount_drops,
-              durationMinutes: c.duration_minutes,
-              creatorAddress: c.escrow_owner || c.creator_id,
-              status: c.status,
-              createdAt: new Date(c.created_at).getTime(),
-              expiresAt: new Date(c.expires_at).getTime(),
-              escrowTxHash: c.escrow_tx_hash,
-              escrowSequence: c.escrow_sequence,
-              escrowOwner: c.escrow_owner,
-            });
-          }
-        } catch {}
+    let mounted = true;
+
+    // Always try API first for freshest data
+    (async () => {
+      try {
+        const res = await fetch(`/api/challenges/${challengeId}`, { cache: "no-store" });
+        const json = await res.json();
+        if (mounted && json.success && json.challenge) {
+          const c = json.challenge;
+          setChallenge({
+            id: c.id,
+            title: c.title,
+            description: c.description,
+            objective: c.objective,
+            location: { name: c.location_name, lat: c.location_lat, lng: c.location_lng },
+            stakeAmount: c.stake_amount_drops,
+            durationMinutes: c.duration_minutes,
+            creatorAddress: c.escrow_owner || c.creator_id,
+            status: c.status,
+            createdAt: new Date(c.created_at).getTime(),
+            expiresAt: new Date(c.expires_at).getTime(),
+            escrowTxHash: c.escrow_tx_hash,
+            escrowSequence: c.escrow_sequence,
+            escrowOwner: c.escrow_owner,
+          });
+          if (mounted) setLoading(false);
+          return;
+        }
+      } catch {}
+
+      // Fallback to local store
+      if (mounted) {
+        const stored = getChallenge(challengeId);
+        if (stored) setChallenge(stored);
         setLoading(false);
-      })();
-    }
+      }
+    })();
+
+    return () => { mounted = false; };
   }, [challengeId]);
 
   if (loading) {
