@@ -2,11 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ChevronLeft, Trophy, XCircle, ExternalLink, Clock } from "lucide-react";
+import { ChevronLeft, CheckCircle2, XCircle, ExternalLink, Clock, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { TrustBadge, TrustPillars } from "@/components/ui/trust-badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TrustBadge, TrustPillars } from "@/components/ui/trust-badge";
 import Link from "next/link";
 
 interface FeedItem {
@@ -49,19 +48,19 @@ export default function FeedPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-zinc-50">
+    <div className="min-h-screen bg-[var(--vs-bg-primary)]">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
-        <div className="max-w-lg mx-auto px-4 py-4">
+      <header className="bg-white border-b border-[var(--vs-border)] sticky top-0 z-40">
+        <div className="max-w-lg mx-auto px-4 py-3">
           <div className="flex items-center gap-3">
             <Link href="/">
-              <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
+              <Button variant="ghost" size="icon" className="text-[var(--vs-text-secondary)] hover:text-[var(--vs-text-primary)] hover:bg-zinc-100 -ml-2">
                 <ChevronLeft className="w-5 h-5" />
               </Button>
             </Link>
             <div>
-              <h1 className="text-xl font-bold">Public Feed</h1>
-              <p className="text-white/80 text-sm">Completed challenges</p>
+              <h1 className="text-lg font-semibold text-[var(--vs-text-primary)]">Public Feed</h1>
+              <p className="text-xs text-[var(--vs-text-tertiary)]">Completed challenges</p>
             </div>
           </div>
         </div>
@@ -72,31 +71,41 @@ export default function FeedPage() {
         {loading && (
           <div className="space-y-4">
             {[...Array(3)].map((_, i) => (
-              <Skeleton key={i} className="h-48 rounded-2xl" />
+              <div key={i} className="bg-white rounded-xl border border-[var(--vs-border)] overflow-hidden">
+                <Skeleton className="h-48 w-full" />
+                <div className="p-4 space-y-2">
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+              </div>
             ))}
           </div>
         )}
 
         {/* Error */}
         {error && !loading && (
-          <div className="text-center py-12">
-            <p className="text-zinc-500 mb-4">{error}</p>
-            <Button onClick={() => window.location.reload()}>Retry</Button>
+          <div className="text-center py-16">
+            <p className="text-[var(--vs-text-secondary)] mb-4">{error}</p>
+            <Button onClick={() => window.location.reload()} variant="outline">
+              Retry
+            </Button>
           </div>
         )}
 
         {/* Empty state */}
         {!loading && !error && feed.length === 0 && (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 rounded-full bg-zinc-100 flex items-center justify-center mx-auto mb-4">
-              <Trophy className="w-8 h-8 text-zinc-400" />
+          <div className="text-center py-16">
+            <div className="w-14 h-14 rounded-full bg-zinc-100 flex items-center justify-center mx-auto mb-4">
+              <Activity className="w-6 h-6 text-zinc-400" />
             </div>
-            <h2 className="text-lg font-semibold text-zinc-900 mb-2">No public challenges yet</h2>
-            <p className="text-zinc-500 text-sm mb-6">
+            <h2 className="text-base font-medium text-[var(--vs-text-primary)] mb-2">No public challenges yet</h2>
+            <p className="text-[var(--vs-text-secondary)] text-sm mb-6">
               Completed challenges will appear here when creators choose to share them.
             </p>
             <Link href="/challenge/create">
-              <Button>Create a Challenge</Button>
+              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                Create a Challenge
+              </Button>
             </Link>
           </div>
         )}
@@ -107,9 +116,9 @@ export default function FeedPage() {
             {feed.map((item, index) => (
               <motion.div
                 key={item.id}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
+                transition={{ delay: index * 0.03 }}
               >
                 <FeedCard item={item} />
               </motion.div>
@@ -118,8 +127,8 @@ export default function FeedPage() {
         )}
 
         {/* Footer */}
-        <div className="mt-8">
-          <TrustPillars size="sm" />
+        <div className="mt-10 pt-6 border-t border-[var(--vs-border-subtle)]">
+          <TrustPillars />
         </div>
       </main>
     </div>
@@ -132,31 +141,31 @@ function FeedCard({ item }: { item: FeedItem }) {
     : null;
 
   return (
-    <Card className="overflow-hidden">
-      {/* Proof thumbnail */}
+    <div className="bg-white rounded-xl border border-[var(--vs-border)] overflow-hidden">
+      {/* Proof image */}
       {proofUrl && (
-        <div className="relative aspect-video bg-zinc-900">
+        <div className="relative aspect-video bg-zinc-100">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={proofUrl}
             alt="Challenge proof"
             className="w-full h-full object-cover"
           />
-          {/* Outcome badge */}
-          <div className={`absolute top-3 right-3 px-3 py-1.5 rounded-full flex items-center gap-1.5 ${
+          {/* Outcome badge - top right */}
+          <div className={`absolute top-3 right-3 px-2.5 py-1 rounded-md flex items-center gap-1.5 text-sm font-medium ${
             item.passed 
-              ? "bg-green-500 text-white" 
-              : "bg-red-500 text-white"
+              ? "bg-green-50 text-green-700 border border-green-200" 
+              : "bg-red-50 text-red-700 border border-red-200"
           }`}>
             {item.passed ? (
               <>
-                <Trophy className="w-4 h-4" />
-                <span className="text-sm font-semibold">Passed</span>
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Passed</span>
               </>
             ) : (
               <>
-                <XCircle className="w-4 h-4" />
-                <span className="text-sm font-semibold">Failed</span>
+                <XCircle className="w-3.5 h-3.5" />
+                <span>Failed</span>
               </>
             )}
           </div>
@@ -166,28 +175,27 @@ function FeedCard({ item }: { item: FeedItem }) {
       {/* Content */}
       <div className="p-4">
         <div className="flex items-start justify-between gap-3 mb-2">
-          <h3 className="font-semibold text-zinc-900">{item.title}</h3>
-          <span className="text-lg font-bold text-emerald-600 whitespace-nowrap">
+          <h3 className="font-medium text-[var(--vs-text-primary)]">{item.title}</h3>
+          <span className="text-base font-semibold text-emerald-600 whitespace-nowrap">
             {item.stakeXrp} XRP
           </span>
         </div>
 
-        <p className="text-sm text-zinc-500 mb-3">{item.locationName}</p>
+        <p className="text-sm text-[var(--vs-text-tertiary)] mb-3">{item.locationName}</p>
 
-        {/* Trust badges */}
+        {/* Badges */}
         <div className="flex items-center gap-2 mb-3">
-          <TrustBadge variant="verified" size="sm" />
-          <TrustBadge variant="xrpl" size="sm" />
+          <TrustBadge variant="verified" size="sm" animated={false} />
           {item.confidence && (
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-[var(--vs-text-tertiary)]">
               {item.confidence}% confidence
             </span>
           )}
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center justify-between pt-3 border-t border-zinc-100">
-          <div className="flex items-center gap-1 text-xs text-zinc-400">
+        {/* Footer */}
+        <div className="flex items-center justify-between pt-3 border-t border-[var(--vs-border-subtle)]">
+          <div className="flex items-center gap-1 text-xs text-[var(--vs-text-tertiary)]">
             <Clock className="w-3.5 h-3.5" />
             <span>{new Date(item.resolvedAt).toLocaleDateString()}</span>
           </div>
@@ -197,7 +205,7 @@ function FeedCard({ item }: { item: FeedItem }) {
               href={`https://testnet.xrpl.org/transactions/${item.settlementTx}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1 text-xs text-blue-600 hover:underline"
+              className="flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-700 font-medium"
             >
               View on XRPL
               <ExternalLink className="w-3 h-3" />
@@ -205,6 +213,6 @@ function FeedCard({ item }: { item: FeedItem }) {
           )}
         </div>
       </div>
-    </Card>
+    </div>
   );
 }
