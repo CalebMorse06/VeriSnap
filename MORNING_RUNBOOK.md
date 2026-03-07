@@ -21,6 +21,9 @@ What this does:
 ## 3) Quick readiness snapshot
 ```bash
 pnpm demo-status
+
+# Optional strict gate (fails if pending settlements > 0)
+VERISNAP_DEMO_STRICT=1 pnpm demo-status
 ```
 
 ## 4) Optional: retry any pending XRPL settlements

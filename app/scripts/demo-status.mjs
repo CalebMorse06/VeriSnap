@@ -14,6 +14,7 @@ import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 
 const APP_ORIGIN = process.env.VERISNAP_APP_ORIGIN || "http://localhost:3000";
+const STRICT_MODE = process.env.VERISNAP_DEMO_STRICT === "1";
 
 function loadEnvLocal() {
   const envPath = resolve(process.cwd(), ".env.local");
@@ -79,6 +80,14 @@ async function main() {
   console.log("-------------------");
   console.log(`${health.ok ? "✅" : "❌"} App health: ${health.detail}`);
   console.log(`${settlement.ok ? "✅" : "⚠️"} Pending settlements: ${settlement.detail}`);
+
+  if (STRICT_MODE) {
+    const pending = Number(settlement?.pending ?? 0);
+    if (pending > 0) {
+      console.error(`\n❌ Strict mode: ${pending} pending settlement(s) detected.`);
+      process.exit(1);
+    }
+  }
 
   if (!health.ok) {
     process.exit(1);
