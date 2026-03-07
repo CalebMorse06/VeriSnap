@@ -1,77 +1,172 @@
-# VeriSnap Deployment Runbook (24h Ship)
+# VeriSnap Deployment Runbook
 
-## 1) Local preflight
+## Prerequisites
+
+- Supabase project created
+- Pinata account with JWT
+- Gemini API key  
+- XRPL testnet wallet (funded)
+- Vultr account (optional, for full infra)
+
+---
+
+## 1) Local Development
 
 ```bash
 cd app
 pnpm install
 cp .env.example .env.local
-# fill all values
+# Fill all env vars
 pnpm preflight
-pnpm build
-```
-
-Health check:
-
-```bash
 pnpm dev
-# open in browser
-http://localhost:3000/api/health
 ```
 
-You should see `ok: true`.
+Health check: http://localhost:3000/api/health → `ok: true`
 
-## 2) Vercel deploy
+---
+
+## 2) Supabase Setup
+
+1. Create project at https://supabase.com
+2. Go to SQL Editor
+3. Run schema from `app/supabase/schema.sql`:
+
+```sql
+-- Paste contents of app/supabase/schema.sql
+```
+
+4. Get credentials from Settings → API:
+   - `SUPABASE_URL`
+   - `SUPABASE_SERVICE_ROLE_KEY` (not anon key)
+
+---
+
+## 3) Environment Variables
+
+Required in `.env.local` (local) or Vercel/Vultr (production):
+
+```env
+# Pinata
+PINATA_JWT=eyJ...
+PINATA_GATEWAY=gateway.pinata.cloud
+
+# Gemini
+GEMINI_API_KEY=AI...
+
+# XRPL Testnet
+XRPL_SERVER=wss://s.altnet.rippletest.net:51233
+XRPL_APP_WALLET_ADDRESS=r...
+XRPL_APP_WALLET_SEED=s...
+
+# Supabase
+SUPABASE_URL=https://xxx.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
+```
+
+---
+
+## 4a) Deploy to Vercel (fastest)
 
 ```bash
 cd app
 pnpm dlx vercel login
 pnpm dlx vercel
-```
-
-When prompted:
-- Framework: Next.js
-- Root directory: `app`
-
-Set env vars in Vercel Project Settings (Production + Preview):
-- `PINATA_JWT`
-- `PINATA_GATEWAY`
-- `GEMINI_API_KEY`
-- `XRPL_SERVER`
-- `XRPL_APP_WALLET_ADDRESS`
-- `XRPL_APP_WALLET_SEED`
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
-
-Apply SQL schema once in Supabase SQL editor:
-- `app/supabase/schema.sql`
-
-Then deploy production:
-
-```bash
+# Set env vars in Vercel dashboard
 pnpm dlx vercel --prod
 ```
 
-## 3) Post-deploy checks
+---
 
-1. `GET /api/health` returns `ok: true`
-2. Create challenge succeeds and returns real escrow tx hash
-3. Capture + verify succeeds
-4. Pass flow returns settlement tx hash (`EscrowFinish`)
-5. XRPL tx links open in testnet explorer
+## 4b) Deploy to Vultr (full control)
 
-## 4) Demo-day checklist
+### Option A: Docker on Vultr Compute
 
-- Keep one browser tab at home screen
-- Keep one terminal open for logs
-- Have two proof images ready (pass + fail)
-- If phone camera permission fails, use desktop upload fallback route (todo)
-- Never rotate env keys during demo window
+1. Create Vultr Cloud Compute instance (Ubuntu 24.04, 2GB+ RAM)
 
-## 5) Production hardening after hackathon
+2. SSH in and install Docker:
+```bash
+ssh root@YOUR_IP
+curl -fsSL https://get.docker.com | sh
+```
 
-- Move wallet signing to secure backend signer service (HSM/KMS)
-- Add auth + challenge ownership checks
-- Add rate limiting + abuse controls
-- Add DB persistence (Postgres/Supabase) instead of sessionStorage
-- Add webhook/event indexing for XRPL tx confirmations
+3. Clone repo and deploy:
+```bash
+git clone https://github.com/YOUR_USER/verisnap.git
+cd verisnap
+
+# Create env file
+cat > app/.env.local << 'EOF'
+PINATA_JWT=...
+PINATA_GATEWAY=gateway.pinata.cloud
+GEMINI_API_KEY=...
+XRPL_SERVER=wss://s.altnet.rippletest.net:51233
+XRPL_APP_WALLET_ADDRESS=...
+XRPL_APP_WALLET_SEED=...
+SUPABASE_URL=...
+SUPABASE_SERVICE_ROLE_KEY=...
+EOF
+
+# Build and run
+docker compose up -d --build
+```
+
+4. App runs on port 3000. Set up reverse proxy (nginx/caddy) for HTTPS.
+
+### Option B: Direct Node.js on Vultr
+
+```bash
+# Install Node
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+apt install -y nodejs
+
+# Install pnpm
+npm i -g pnpm
+
+# Clone and build
+git clone https://github.com/YOUR_USER/verisnap.git
+cd verisnap/app
+pnpm install
+# Create .env.local with vars above
+pnpm build
+
+# Run with PM2
+npm i -g pm2
+pm2 start "pnpm start" --name verisnap
+pm2 save
+pm2 startup
+```
+
+---
+
+## 5) Post-Deploy Checklist
+
+- [ ] `GET /api/health` returns `ok: true`
+- [ ] Create challenge → returns escrow tx hash
+- [ ] Accept challenge → timer starts
+- [ ] Capture proof → camera works
+- [ ] Verify → Gemini returns verdict
+- [ ] Result → shows verification trail + settlement tx
+- [ ] XRPL explorer links work
+
+---
+
+## 6) Demo Script (90 seconds)
+
+1. **Create** (15s): "Visit KU Campanile, 20 XRP stake" → Show escrow lock
+2. **Accept** (5s): Timer starts, stake at risk
+3. **Capture** (15s): Take photo, see "Ready to upload to Pinata"
+4. **Verify** (20s): Watch three-step progress (Pinata → Gemini → XRPL)
+5. **Result** (20s): Show verification trail, tx links, confetti on pass
+6. **Explain** (15s): "Real XRPL escrow, private IPFS proof, AI-verified, trustless settlement"
+
+---
+
+## Production Hardening (Post-Hackathon)
+
+- [ ] Move wallet signing to HSM/KMS
+- [ ] Add user auth (Passkey/WebAuthn)
+- [ ] Add rate limiting at edge (Cloudflare)
+- [ ] Add observability (Sentry, LogFlare)
+- [ ] Add DB connection pooling
+- [ ] Add challenge ownership enforcement
+- [ ] Add terms of service

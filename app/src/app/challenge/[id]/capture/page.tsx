@@ -281,9 +281,9 @@ export default function CapturePage() {
               <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-white rounded-bl-xl" />
               <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-white rounded-br-xl" />
             </div>
-            <div className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-black/60 px-4 py-2 rounded-full">
+            <div className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-sm px-4 py-2 rounded-full">
               <p className="text-white text-sm font-medium">
-                Frame the KU Campanile clearly
+                Frame your proof clearly
               </p>
             </div>
           </div>
