@@ -10,7 +10,8 @@
     "preflight": "node scripts/preflight.mjs",
     "smoke": "node scripts/smoke.mjs",
     "privacy-check": "node scripts/privacy-check.mjs",
-    "verify-demo": "node scripts/verify-demo.mjs"
+    "verify-demo": "node scripts/verify-demo.mjs",
+    "retry-settlements": "node scripts/retry-settlements.mjs"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
