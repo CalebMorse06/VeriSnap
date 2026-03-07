@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: false, error: "Supabase not configured" }, { status: 503 });
   }
 
+  const uid = await getOrSetUserId();
   const { data, error } = await supabase
     .from("challenges")
     .select("*")
@@ -25,7 +26,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ success: true, challenges: data });
+  const challenges = (data ?? []).map((c) => {
+    const isCreator = c.creator_id === uid;
+    const canViewProof = isCreator || c.proof_revealed === true || c.visibility === "public";
+    return canViewProof
+      ? c
+      : {
+          ...c,
+          proof_cid: null,
+        };
+  });
+
+  return NextResponse.json({ success: true, challenges });
 }
 
 export async function POST(request: NextRequest) {
@@ -57,6 +69,8 @@ export async function POST(request: NextRequest) {
     stake_amount_drops: Number(body.stakeAmount ?? 0),
     duration_minutes: Number(body.durationMinutes ?? 20),
     status: body.status ?? "FUNDED",
+    visibility: body.visibility ?? "private",
+    proof_revealed: Boolean(body.proofRevealed ?? false),
     created_at: new Date().toISOString(),
     expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     escrow_sequence: body.escrowSequence ?? null,
