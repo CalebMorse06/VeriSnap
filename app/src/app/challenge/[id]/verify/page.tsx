@@ -67,6 +67,8 @@ export default function VerifyPage() {
           challengeId: proofData.challengeId,
           imageData: proofData.imageData,
           challengeObjective,
+          escrowOwner: challenge?.escrowOwner,
+          escrowSequence: challenge?.escrowSequence,
         }),
       });
 
@@ -108,34 +110,7 @@ export default function VerifyPage() {
       console.error("Verification error:", err);
       setError(err instanceof Error ? err.message : "Unknown error");
       setCurrentStep("error");
-
-      // Deterministic demo fallback (no randomness during judging)
-      setTimeout(() => {
-        const fallbackPassed = challengeId === "campanile-1";
-        const fallback: VerificationResult = {
-          passed: fallbackPassed,
-          confidence: fallbackPassed ? 88 : 41,
-          reasoning: fallbackPassed
-            ? "Demo fallback: objective appears satisfied for this challenge."
-            : "Demo fallback: objective could not be confidently verified.",
-          proofCid: `QmDEMO${challengeId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 12)}`,
-          settlementTx: `DEMO_TX_${challengeId}_${Date.now()}`,
-        };
-
-        sessionStorage.setItem("verificationResult", JSON.stringify(fallback));
-        updateChallenge(challengeId, {
-          status: "SETTLED",
-          proofCid: fallback.proofCid,
-          verificationResult: {
-            passed: fallback.passed,
-            confidence: fallback.confidence,
-            reasoning: fallback.reasoning,
-          },
-          settlementTx: fallback.settlementTx,
-        });
-
-        router.push(`/challenge/${challengeId}/result?passed=${fallback.passed}`);
-      }, 1200);
+      updateChallenge(challengeId, { status: "PROOF_SUBMITTED" });
     }
   }
 
@@ -149,9 +124,23 @@ export default function VerifyPage() {
 
       {currentStep === "error" && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center mb-8">
-          <AlertCircle className="w-12 h-12 text-yellow-500 mx-auto mb-3" />
-          <p className="text-yellow-400 text-sm">API unavailable — using stable demo fallback</p>
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-3" />
+          <p className="text-red-400 text-sm">Verification failed</p>
           {error && <p className="text-zinc-400 text-xs mt-1">{error}</p>}
+          <div className="flex gap-2 justify-center mt-4">
+            <button
+              className="px-3 py-2 text-sm rounded bg-zinc-700 text-white"
+              onClick={() => router.push(`/challenge/${challengeId}/capture`)}
+            >
+              Retake Proof
+            </button>
+            <button
+              className="px-3 py-2 text-sm rounded bg-blue-600 text-white"
+              onClick={() => window.location.reload()}
+            >
+              Retry Verify
+            </button>
+          </div>
         </motion.div>
       )}
 

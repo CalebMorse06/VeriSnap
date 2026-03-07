@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { createChallenge } from "@/lib/store/challenges";
+import { createChallenge, updateChallenge } from "@/lib/store/challenges";
 
 // Preset challenges for quick demo
 const PRESETS = [
@@ -87,10 +87,33 @@ export default function CreateChallengePage() {
       };
 
       const challenge = createChallenge(data);
-      
-      // Simulate XRPL escrow creation delay
-      await new Promise(r => setTimeout(r, 1500));
-      
+
+      // Create real XRPL escrow on backend
+      const escrowResp = await fetch("/api/challenge/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: data.title,
+          description: data.description,
+          objective: data.objective,
+          location: data.location,
+          stakeAmountXrp: data.stakeAmount / 1_000_000,
+          durationMinutes: data.durationMinutes,
+        }),
+      });
+
+      const escrowData = await escrowResp.json();
+      if (!escrowResp.ok || !escrowData.success) {
+        throw new Error(escrowData.error || "Failed to create XRPL escrow");
+      }
+
+      // Persist escrow details for settlement step
+      updateChallenge(challenge.id, {
+        escrowTxHash: escrowData.escrowTxHash,
+        escrowSequence: escrowData.escrowSequence,
+        escrowOwner: escrowData.escrowOwner,
+      });
+
       router.push(`/challenge/${challenge.id}`);
     } catch (error) {
       console.error("Failed to create challenge:", error);

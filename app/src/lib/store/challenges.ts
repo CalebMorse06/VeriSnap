@@ -16,6 +16,7 @@ export interface ChallengeData {
   acceptedAt?: number;
   escrowSequence?: number;
   escrowTxHash?: string;
+  escrowOwner?: string;
   proofCid?: string;
   proofUrl?: string;
   verificationResult?: {
