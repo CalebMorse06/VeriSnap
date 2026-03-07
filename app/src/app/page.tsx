@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import { ChallengeCard } from "@/components/challenge/ChallengeCard";
 import { Button } from "@/components/ui/button";
-import { Plus, Zap, Trophy, RotateCcw } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { TrustPillars } from "@/components/ui/trust-badge";
+import { Plus, Zap, RotateCcw, Sparkles } from "lucide-react";
 import { Challenge, ChallengeStatus } from "@/types/challenge";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { getChallenges } from "@/lib/store/challenges";
 
@@ -27,6 +29,7 @@ function toUiChallenge(c: any): Challenge {
 
 export default function Home() {
   const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
@@ -49,14 +52,16 @@ export default function Home() {
             xrpTxHash: c.escrow_tx_hash,
           } as Challenge));
           setChallenges(mapped);
-          return;
+        } else {
+          setChallenges(getChallenges().map(toUiChallenge));
         }
-      } catch {}
-      if (mounted) setChallenges(getChallenges().map(toUiChallenge));
+      } catch {
+        setChallenges(getChallenges().map(toUiChallenge));
+      } finally {
+        if (mounted) setLoading(false);
+      }
     })();
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, []);
 
   const resetDemo = () => {
@@ -64,29 +69,33 @@ export default function Home() {
     sessionStorage.removeItem("proofData");
     sessionStorage.removeItem("verificationResult");
     sessionStorage.removeItem("challengeAccepted");
-    setChallenges(getChallenges().map(toUiChallenge));
+    window.location.reload();
   };
 
   return (
     <div className="min-h-screen bg-zinc-50">
-      <header className="bg-white border-b sticky top-0 z-50">
-        <div className="max-w-lg mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
+      {/* Header */}
+      <header className="bg-white border-b border-zinc-100 sticky top-0 z-50 backdrop-blur-lg bg-white/80">
+        <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <motion.div
+              initial={{ rotate: -10, scale: 0.9 }}
+              animate={{ rotate: 0, scale: 1 }}
+              className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/30"
+            >
               <Zap className="w-5 h-5 text-white" />
-            </div>
+            </motion.div>
             <div>
-              <span className="text-xl font-bold">VeriSnap</span>
-              <span className="text-xs text-zinc-400 block -mt-1">XRPL Challenges</span>
+              <h1 className="text-xl font-bold text-zinc-900">VeriSnap</h1>
+              <p className="text-[10px] text-zinc-500 font-medium -mt-0.5">XRPL • Pinata • Gemini</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" className="gap-1" onClick={resetDemo}>
-              <RotateCcw className="w-4 h-4" />
-              Reset
+            <Button size="sm" variant="ghost" className="gap-1 text-zinc-500" onClick={resetDemo}>
+              <RotateCcw className="w-3.5 h-3.5" />
             </Button>
             <Link href="/challenge/create">
-              <Button size="sm" className="gap-1">
+              <Button size="sm" className="gap-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800">
                 <Plus className="w-4 h-4" />
                 Create
               </Button>
@@ -96,46 +105,115 @@ export default function Home() {
       </header>
 
       <main className="max-w-lg mx-auto px-4 py-6">
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-zinc-900">Live Challenges</h1>
-          <p className="text-zinc-500 mt-1">Complete challenges. Prove with AI. Win XRP.</p>
+        {/* Hero */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-6"
+        >
+          <h2 className="text-2xl font-bold text-zinc-900">Live Challenges</h2>
+          <p className="text-zinc-500 mt-1 text-sm">Stake XRP. Prove with AI. Settle on-chain.</p>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="flex justify-center gap-2 mb-6 flex-wrap">
-          <span className="px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-xs font-medium">XRPL Escrow</span>
-          <span className="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">Pinata IPFS</span>
-          <span className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">Gemini AI</span>
+        {/* Trust pillars */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.1 }}
+          className="mb-6"
+        >
+          <TrustPillars size="sm" />
         </motion.div>
 
-        <div className="space-y-4">
-          {challenges.map((challenge, index) => (
-            <motion.div key={challenge.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + index * 0.1 }}>
-              <ChallengeCard
-                challenge={challenge}
-                onAccept={() => {
-                  window.location.href = `/challenge/${challenge.id}/accept`;
-                }}
-                onView={() => {
-                  window.location.href = `/challenge/${challenge.id}`;
-                }}
-              />
+        {/* Loading skeleton */}
+        <AnimatePresence mode="wait">
+          {loading ? (
+            <motion.div
+              key="loading"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="space-y-4"
+            >
+              {[1, 2].map((i) => (
+                <div key={i} className="bg-white rounded-2xl p-4 space-y-3">
+                  <Skeleton className="h-24 w-full" />
+                  <Skeleton className="h-4 w-2/3" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              ))}
             </motion.div>
-          ))}
-        </div>
+          ) : challenges.length === 0 ? (
+            <motion.div
+              key="empty"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-center py-16"
+            >
+              <div className="w-16 h-16 rounded-full bg-zinc-100 flex items-center justify-center mx-auto mb-4">
+                <Sparkles className="w-8 h-8 text-zinc-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-zinc-700">No challenges yet</h3>
+              <p className="text-zinc-500 text-sm mt-1">Create your first challenge to get started</p>
+              <Link href="/challenge/create">
+                <Button className="mt-4">Create Challenge</Button>
+              </Link>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="list"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="space-y-4"
+            >
+              {challenges.map((challenge, index) => (
+                <motion.div
+                  key={challenge.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                >
+                  <ChallengeCard
+                    challenge={challenge}
+                    onAccept={() => { window.location.href = `/challenge/${challenge.id}/accept`; }}
+                    onView={() => { window.location.href = `/challenge/${challenge.id}`; }}
+                  />
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="mt-8 p-4 bg-zinc-100 rounded-2xl">
-          <h3 className="font-semibold text-zinc-900 mb-3 flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-yellow-500" />
-            How VeriSnap Works
-          </h3>
-          <ol className="space-y-2 text-sm text-zinc-600">
-            <li>1) Accept challenge → stake locks in XRPL escrow</li>
-            <li>2) Complete task before timer expires</li>
-            <li>3) Submit live proof photo to private IPFS</li>
-            <li>4) Gemini AI verifies pass/fail</li>
-            <li>5) XRPL escrow settles outcome</li>
-          </ol>
-        </motion.div>
+        {/* How it works */}
+        {!loading && challenges.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="mt-8 p-5 bg-white rounded-2xl border border-zinc-100"
+          >
+            <h3 className="font-semibold text-zinc-900 mb-4 flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-xs">?</span>
+              How It Works
+            </h3>
+            <ol className="space-y-3 text-sm">
+              {[
+                { step: "1", text: "Accept challenge → XRP locks in XRPL escrow", color: "emerald" },
+                { step: "2", text: "Complete task before timer expires", color: "orange" },
+                { step: "3", text: "Capture proof → uploads privately to Pinata", color: "purple" },
+                { step: "4", text: "Gemini AI verifies your submission", color: "blue" },
+                { step: "5", text: "Pass = escrow released. Fail = forfeited.", color: "zinc" },
+              ].map((item) => (
+                <li key={item.step} className="flex gap-3">
+                  <span className={`w-6 h-6 rounded-full bg-${item.color}-100 text-${item.color}-700 flex items-center justify-center text-xs font-bold flex-shrink-0`}>
+                    {item.step}
+                  </span>
+                  <span className="text-zinc-600">{item.text}</span>
+                </li>
+              ))}
+            </ol>
+          </motion.div>
+        )}
       </main>
     </div>
   );
