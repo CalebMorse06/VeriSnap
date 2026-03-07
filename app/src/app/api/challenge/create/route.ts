@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createEscrow, Wallet } from "@/lib/xrpl";
+import { requireEnv } from "@/lib/env";
+import { createChallengeSchema } from "@/lib/schemas";
 
 interface CreateChallengeRequest {
   title: string;
@@ -13,16 +15,16 @@ interface CreateChallengeRequest {
 export async function POST(request: NextRequest) {
   try {
     const body: CreateChallengeRequest = await request.json();
-
-    const seed = process.env.XRPL_APP_WALLET_SEED;
-    const address = process.env.XRPL_APP_WALLET_ADDRESS;
-
-    if (!seed || !address) {
+    const parsed = createChallengeSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: "Missing XRPL_APP_WALLET_SEED or XRPL_APP_WALLET_ADDRESS" },
-        { status: 500 }
+        { success: false, error: "Invalid challenge payload", details: parsed.error.flatten() },
+        { status: 400 }
       );
     }
+
+    const seed = requireEnv("XRPL_APP_WALLET_SEED");
+    const address = requireEnv("XRPL_APP_WALLET_ADDRESS");
 
     const wallet = Wallet.fromSeed(seed);
     if (wallet.address !== address) {

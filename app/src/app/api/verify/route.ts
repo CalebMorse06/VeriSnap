@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { uploadProofPrivate, createVerifierAccessLink } from "@/lib/pinata";
 import { verifyProof } from "@/lib/gemini";
 import { finishEscrow, Wallet } from "@/lib/xrpl";
+import { requireEnv } from "@/lib/env";
+import { verifySchema } from "@/lib/schemas";
 
 interface VerifyRequest {
   challengeId: string;
@@ -15,7 +17,15 @@ interface VerifyRequest {
 export async function POST(request: NextRequest) {
   try {
     const body: VerifyRequest = await request.json();
-    const { challengeId, imageData, challengeObjective, participantAddress, escrowOwner, escrowSequence } = body;
+    const parsed = verifySchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: "Invalid verify payload", details: parsed.error.flatten() },
+        { status: 400 }
+      );
+    }
+
+    const { challengeId, imageData, challengeObjective, participantAddress, escrowOwner, escrowSequence } = parsed.data;
 
     // 1. Upload proof to Pinata
     console.log("[Verify] Uploading to Pinata...");
@@ -36,9 +46,7 @@ export async function POST(request: NextRequest) {
     let settlementTx: string | null = null;
     if (verification.passed && escrowOwner && typeof escrowSequence === "number") {
       console.log("[Verify] Settling on XRPL via EscrowFinish...");
-      const seed = process.env.XRPL_APP_WALLET_SEED;
-      if (!seed) throw new Error("Missing XRPL_APP_WALLET_SEED");
-
+      const seed = requireEnv("XRPL_APP_WALLET_SEED");
       const appWallet = Wallet.fromSeed(seed);
       settlementTx = await finishEscrow(appWallet, escrowOwner, escrowSequence, challengeId);
       console.log("[Verify] Settlement:", settlementTx);
