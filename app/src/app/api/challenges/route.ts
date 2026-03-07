@@ -26,16 +26,23 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 
-  const challenges = (data ?? []).map((c) => {
-    const isCreator = c.creator_id === uid;
-    const canViewProof = isCreator || c.proof_revealed === true || c.visibility === "public";
-    return canViewProof
-      ? c
-      : {
-          ...c,
-          proof_cid: null,
-        };
-  });
+  const challenges = (data ?? [])
+    .filter((c) => {
+      const isCreator = c.creator_id === uid;
+      // Non-owners should not see private/friends-only challenges in list endpoint
+      if (!isCreator && c.visibility !== "public") return false;
+      return true;
+    })
+    .map((c) => {
+      const isCreator = c.creator_id === uid;
+      const canViewProof = isCreator || c.proof_revealed === true || c.visibility === "public";
+      return canViewProof
+        ? c
+        : {
+            ...c,
+            proof_cid: null,
+          };
+    });
 
   return NextResponse.json({ success: true, challenges });
 }

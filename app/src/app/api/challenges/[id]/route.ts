@@ -12,9 +12,14 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
   if (error) return NextResponse.json({ success: false, error: error.message }, { status: 404 });
 
   const isCreator = data.creator_id === uid;
+
+  // Privacy guard: private challenges are not readable by non-owners
+  if (!isCreator && data.visibility === "private") {
+    return NextResponse.json({ success: false, error: "Not authorized" }, { status: 403 });
+  }
+
   const canViewProof = isCreator || data.proof_revealed === true || data.visibility === "public";
 
-  // Privacy guard: never leak private proof details to non-owners
   const challenge = canViewProof
     ? data
     : {
