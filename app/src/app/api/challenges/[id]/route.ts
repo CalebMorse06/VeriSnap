@@ -7,10 +7,22 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
   const supabase = getSupabaseAdmin();
   if (!supabase) return NextResponse.json({ success: false, error: "Supabase not configured" }, { status: 503 });
 
+  const uid = await getOrSetUserId();
   const { data, error } = await supabase.from("challenges").select("*").eq("id", id).single();
   if (error) return NextResponse.json({ success: false, error: error.message }, { status: 404 });
 
-  return NextResponse.json({ success: true, challenge: data });
+  const isCreator = data.creator_id === uid;
+  const canViewProof = isCreator || data.proof_revealed === true || data.visibility === "public";
+
+  // Privacy guard: never leak private proof details to non-owners
+  const challenge = canViewProof
+    ? data
+    : {
+        ...data,
+        proof_cid: null,
+      };
+
+  return NextResponse.json({ success: true, challenge });
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
