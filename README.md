@@ -88,6 +88,9 @@ Health check: http://localhost:3000/api/health
 ### Morning demo commands
 
 ```bash
+# One-command morning gate (strict status + full verify)
+pnpm morning
+
 # One-command demo validation (build + health + smoke + privacy)
 pnpm verify-demo
 
