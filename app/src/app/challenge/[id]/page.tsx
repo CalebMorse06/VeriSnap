@@ -1,242 +1,219 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { MapPin, Clock, Coins, Shield, Camera, ChevronLeft, Share2, User, Zap } from "lucide-react";
-import { getChallenge } from "@/lib/store/challenges";
+import { MapPin, Clock, ChevronLeft, User, Zap, Shield, Lock, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { TrustBadge, TrustPillars } from "@/components/ui/trust-badge";
+import { AmountDisplay } from "@/components/ui/amount-display";
+import { TxLink } from "@/components/ui/tx-link";
+import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
-
-// Demo challenge data
-const CHALLENGES: Record<string, {
-  id: string;
-  title: string;
-  description: string;
-  objective: string;
-  location: { name: string; lat: number; lng: number };
-  stakeAmount: number;
-  durationMinutes: number;
-  creatorAddress: string;
-  status: string;
-}> = {
-  "campanile-1": {
-    id: "campanile-1",
-    title: "Visit the KU Campanile",
-    description: "Prove you're at the iconic KU Campanile bell tower. This 120-foot tall campanile is one of the most recognizable landmarks at the University of Kansas.",
-    objective: "Take a clear photo showing the KU Campanile bell tower. The tower must be clearly visible and recognizable in the image.",
-    location: { name: "KU Campanile, Lawrence, KS", lat: 38.9543, lng: -95.2558 },
-    stakeAmount: 20_000_000,
-    durationMinutes: 20,
-    creatorAddress: "rVeriSnapDemo123",
-    status: "FUNDED",
-  },
-};
+import { getChallenge, ChallengeData } from "@/lib/store/challenges";
 
 export default function ChallengePage() {
   const params = useParams();
   const router = useRouter();
   const challengeId = params.id as string;
-  
-  const stored = getChallenge(challengeId);
-  const challenge = stored || CHALLENGES[challengeId] || CHALLENGES["campanile-1"];
+  const [challenge, setChallenge] = useState<ChallengeData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const stored = getChallenge(challengeId);
+    if (stored) {
+      setChallenge(stored);
+      setLoading(false);
+    } else {
+      // Try fetch from API
+      (async () => {
+        try {
+          const res = await fetch(`/api/challenges/${challengeId}`);
+          const json = await res.json();
+          if (json.success && json.challenge) {
+            const c = json.challenge;
+            setChallenge({
+              id: c.id,
+              title: c.title,
+              description: c.description,
+              objective: c.objective,
+              location: { name: c.location_name, lat: c.location_lat, lng: c.location_lng },
+              stakeAmount: c.stake_amount_drops,
+              durationMinutes: c.duration_minutes,
+              creatorAddress: c.escrow_owner || c.creator_id,
+              status: c.status,
+              createdAt: new Date(c.created_at).getTime(),
+              expiresAt: new Date(c.expires_at).getTime(),
+              escrowTxHash: c.escrow_tx_hash,
+              escrowSequence: c.escrow_sequence,
+              escrowOwner: c.escrow_owner,
+            });
+          }
+        } catch {}
+        setLoading(false);
+      })();
+    }
+  }, [challengeId]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-zinc-50">
+        <div className="h-56 bg-zinc-200 animate-pulse" />
+        <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-14 w-full" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!challenge) {
+    return (
+      <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-6">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-zinc-700">Challenge not found</h2>
+          <Link href="/">
+            <Button className="mt-4">Go Home</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   const xrpAmount = (challenge.stakeAmount / 1_000_000).toFixed(0);
 
   return (
     <div className="min-h-screen bg-zinc-50">
-      {/* Header image area */}
-      <div className="relative h-56 bg-gradient-to-br from-zinc-800 via-zinc-900 to-black">
-        {/* Back button */}
+      {/* Header */}
+      <div className="relative h-64 bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900">
         <Link href="/" className="absolute top-4 left-4 z-10">
           <button className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center">
             <ChevronLeft className="w-5 h-5 text-white" />
           </button>
         </Link>
 
-        {/* Share button */}
-        <button className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center">
-          <Share2 className="w-5 h-5 text-white" />
-        </button>
-
-        {/* Challenge badge */}
-        <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between">
-          <div>
-            <Badge className="bg-green-500 text-white mb-2">Live Challenge</Badge>
-            <h1 className="text-2xl font-bold text-white">{challenge.title}</h1>
-          </div>
-          <div className="text-right">
-            <p className="text-zinc-400 text-xs">STAKE</p>
-            <p className="text-2xl font-bold text-green-400">{xrpAmount} XRP</p>
+        <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-black/80 to-transparent">
+          <div className="flex items-end justify-between gap-4">
+            <div className="flex-1">
+              <TrustBadge variant="escrow" size="sm" animated={false} />
+              <h1 className="text-2xl font-bold text-white mt-2">{challenge.title}</h1>
+              <p className="text-zinc-300 text-sm mt-1 line-clamp-2">{challenge.description}</p>
+            </div>
+            <div className="text-right flex-shrink-0">
+              <p className="text-zinc-400 text-xs mb-1">STAKE</p>
+              <p className="text-3xl font-bold text-emerald-400">{xrpAmount}</p>
+              <p className="text-emerald-300 text-sm">XRP</p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Content */}
-      <main className="max-w-lg mx-auto px-4 py-6 -mt-4 relative z-10">
+      <main className="max-w-lg mx-auto px-4 py-6 space-y-5">
         {/* Quick stats */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <Card className="mb-4">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <Card>
             <CardContent className="p-4">
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
-                  <Clock className="w-5 h-5 text-orange-500 mx-auto mb-1" />
+                  <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center mx-auto mb-2">
+                    <Clock className="w-5 h-5 text-orange-600" />
+                  </div>
                   <p className="text-lg font-bold text-zinc-900">{challenge.durationMinutes}</p>
                   <p className="text-xs text-zinc-500">Minutes</p>
                 </div>
                 <div>
-                  <Coins className="w-5 h-5 text-green-500 mx-auto mb-1" />
+                  <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center mx-auto mb-2">
+                    <Lock className="w-5 h-5 text-emerald-600" />
+                  </div>
                   <p className="text-lg font-bold text-zinc-900">{xrpAmount}</p>
-                  <p className="text-xs text-zinc-500">XRP Stake</p>
+                  <p className="text-xs text-zinc-500">XRP Escrow</p>
                 </div>
                 <div>
-                  <Camera className="w-5 h-5 text-blue-500 mx-auto mb-1" />
+                  <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center mx-auto mb-2">
+                    <MapPin className="w-5 h-5 text-purple-600" />
+                  </div>
                   <p className="text-lg font-bold text-zinc-900">1</p>
-                  <p className="text-xs text-zinc-500">Photo Proof</p>
+                  <p className="text-xs text-zinc-500">Location</p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Description */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <Card className="mb-4">
-            <CardContent className="p-4">
-              <h2 className="font-semibold text-zinc-900 mb-2">About this Challenge</h2>
-              <p className="text-zinc-600 text-sm leading-relaxed">
-                {challenge.description}
-              </p>
             </CardContent>
           </Card>
         </motion.div>
 
         {/* Objective */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-        >
-          <Card className="mb-4 border-blue-200 bg-blue-50">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white">
             <CardContent className="p-4">
               <h2 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
-                <Camera className="w-4 h-4" />
-                What You Need to Submit
+                <Shield className="w-4 h-4" />
+                Verification Objective
               </h2>
-              <p className="text-blue-800 text-sm">
-                {challenge.objective}
-              </p>
+              <p className="text-blue-800 text-sm leading-relaxed">{challenge.objective}</p>
             </CardContent>
           </Card>
         </motion.div>
 
         {/* Location */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Card className="mb-4">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+          <Card>
             <CardContent className="p-4">
               <h2 className="font-semibold text-zinc-900 mb-3 flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-purple-500" />
                 Location
               </h2>
-              {/* Map placeholder */}
-              <div className="h-32 bg-zinc-200 rounded-lg mb-3 flex items-center justify-center overflow-hidden">
-                <img 
-                  src={`https://api.mapbox.com/styles/v1/mapbox/light-v11/static/pin-l+3b82f6(${challenge.location.lng},${challenge.location.lat})/${challenge.location.lng},${challenge.location.lat},15,0/400x200@2x?access_token=pk.placeholder`}
-                  alt="Map"
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                    e.currentTarget.parentElement!.innerHTML = `<div class="text-zinc-500 text-sm">${challenge.location.name}</div>`;
-                  }}
-                />
+              <div className="h-24 bg-zinc-100 rounded-lg mb-3 flex items-center justify-center">
+                <p className="text-zinc-500 text-sm">{challenge.location.name}</p>
               </div>
-              <p className="text-zinc-600 text-sm">{challenge.location.name}</p>
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* How it works */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-        >
-          <Card className="mb-4">
+        {/* Escrow transaction */}
+        {challenge.escrowTxHash && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+            <TxLink hash={challenge.escrowTxHash} type="escrow" />
+          </motion.div>
+        )}
+
+        {/* Trust pillars */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+          <Card>
             <CardContent className="p-4">
-              <h2 className="font-semibold text-zinc-900 mb-3 flex items-center gap-2">
-                <Shield className="w-4 h-4 text-green-500" />
-                How Verification Works
-              </h2>
-              <ol className="space-y-2 text-sm text-zinc-600">
-                <li className="flex gap-2">
-                  <span className="w-5 h-5 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
-                  <span>Your stake locks in XRPL escrow</span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
-                  <span>Proof uploads privately to Pinata IPFS</span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
-                  <span>Gemini AI verifies your submission</span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="w-5 h-5 rounded-full bg-zinc-100 text-zinc-700 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
-                  <span>Pass = escrow released to you. Fail = forfeited.</span>
-                </li>
-              </ol>
+              <h2 className="font-semibold text-zinc-900 mb-3">Powered By</h2>
+              <TrustPillars size="sm" />
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* Creator info */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Card className="mb-6">
+        {/* Creator */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          <Card>
             <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-zinc-200 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center">
                 <User className="w-5 h-5 text-zinc-500" />
               </div>
-              <div className="flex-1">
-                <p className="text-sm text-zinc-500">Created by</p>
-                <p className="text-sm font-mono text-zinc-700 truncate">
-                  {challenge.creatorAddress}
-                </p>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-zinc-500">Created by</p>
+                <p className="text-sm font-mono text-zinc-700 truncate">{challenge.creatorAddress}</p>
               </div>
             </CardContent>
           </Card>
         </motion.div>
 
         {/* Accept button */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35 }}
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
           <Button
             size="lg"
-            className="w-full text-lg h-14 gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+            className="w-full text-lg h-14 gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg shadow-purple-500/20"
             onClick={() => router.push(`/challenge/${challengeId}/accept`)}
           >
             <Zap className="w-5 h-5" />
-            Accept Challenge — Stake {xrpAmount} XRP
+            Accept Challenge
           </Button>
           <p className="text-center text-xs text-zinc-500 mt-3">
-            By accepting, you agree to stake {xrpAmount} XRP in escrow
+            {xrpAmount} XRP will be locked in XRPL escrow
           </p>
         </motion.div>
       </main>
