@@ -3,16 +3,14 @@
 import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { CheckCircle2, XCircle, Share2, Home, ArrowLeft } from "lucide-react";
+import { CheckCircle2, XCircle, Home, ChevronLeft, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { TrustPillars, TrustBadge } from "@/components/ui/trust-badge";
+import { TrustPillars } from "@/components/ui/trust-badge";
 import { AmountDisplay } from "@/components/ui/amount-display";
-import { VerificationTrail } from "@/components/ui/verification-trail";
+import { ShareOptions } from "@/components/challenge/ShareOptions";
 import Link from "next/link";
 import confetti from "canvas-confetti";
 import { getChallenge, updateChallenge, type ChallengeVisibility } from "@/lib/store/challenges";
-import { ShareOptions } from "@/components/challenge/ShareOptions";
 
 interface VerificationData {
   passed: boolean;
@@ -56,126 +54,141 @@ export default function ResultPage() {
   const reasoning = verification?.reasoning ?? (passed
     ? "The submitted image clearly shows the challenge objective."
     : "Unable to verify the challenge objective in the submitted image.");
-  const proofCid = verification?.proofCid ?? challenge?.proofCid ?? `QmDEMO${challengeId.replace(/[^a-zA-Z0-9]/g, "")}`;
-  const settlementTx = verification?.settlementTx ?? challenge?.settlementTx ?? `TX_${challengeId}`;
+  const proofCid = verification?.proofCid ?? challenge?.proofCid;
+  const settlementTx = verification?.settlementTx ?? challenge?.settlementTx;
   const stakeDrops = challenge?.stakeAmount ?? 20_000_000;
 
   return (
-    <div className={`min-h-screen ${passed ? "bg-gradient-to-b from-green-50 via-white to-white" : "bg-gradient-to-b from-red-50 via-white to-white"}`}>
-      {/* Back nav */}
-      <div className="safe-area-inset-top px-4 py-3">
-        <Link href="/" className="inline-flex items-center gap-2 text-zinc-600 hover:text-zinc-900 transition-colors">
-          <ArrowLeft className="w-4 h-4" />
-          <span className="text-sm font-medium">Home</span>
-        </Link>
-      </div>
+    <div className="min-h-screen bg-[var(--vs-bg-primary)]">
+      {/* Header */}
+      <header className="bg-white border-b border-[var(--vs-border)]">
+        <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
+          <Link href="/">
+            <Button variant="ghost" size="icon" className="text-[var(--vs-text-secondary)] hover:text-[var(--vs-text-primary)] hover:bg-zinc-100 -ml-2">
+              <ChevronLeft className="w-5 h-5" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-lg font-semibold text-[var(--vs-text-primary)]">Result</h1>
+            <p className="text-xs text-[var(--vs-text-tertiary)]">Challenge complete</p>
+          </div>
+        </div>
+      </header>
 
-      {/* Result header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="pt-6 pb-8 text-center px-4"
-      >
+      <main className="max-w-lg mx-auto px-4 py-6">
+        {/* Result hero */}
         <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", delay: 0.2 }}
-          className={`w-20 h-20 rounded-full mx-auto flex items-center justify-center shadow-lg ${
-            passed ? "bg-green-500 shadow-green-500/30" : "bg-red-500 shadow-red-500/30"
-          }`}
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-6"
         >
-          {passed ? (
-            <CheckCircle2 className="w-10 h-10 text-white" />
-          ) : (
-            <XCircle className="w-10 h-10 text-white" />
-          )}
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", delay: 0.2 }}
+            className={`w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-4 ${
+              passed ? "bg-green-500" : "bg-red-500"
+            }`}
+          >
+            {passed ? (
+              <CheckCircle2 className="w-8 h-8 text-white" />
+            ) : (
+              <XCircle className="w-8 h-8 text-white" />
+            )}
+          </motion.div>
+
+          <h2 className={`text-xl font-semibold ${passed ? "text-green-700" : "text-red-700"}`}>
+            {passed ? "Challenge Passed" : "Challenge Failed"}
+          </h2>
+          <p className="text-[var(--vs-text-secondary)] text-sm mt-1">
+            {confidence}% confidence
+          </p>
         </motion.div>
 
-        <motion.h1
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
-          className={`text-2xl font-bold mt-5 ${passed ? "text-green-700" : "text-red-700"}`}
-        >
-          {passed ? "Challenge Passed!" : "Challenge Failed"}
-        </motion.h1>
-
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="mt-3"
-        >
-          <TrustBadge variant={passed ? "verified" : "private"} size="md" />
-        </motion.div>
-      </motion.div>
-
-      <main className="max-w-lg mx-auto px-4 pb-10 space-y-5">
         {/* Outcome card */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
+          transition={{ delay: 0.1 }}
+          className={`p-5 rounded-xl mb-6 ${
+            passed 
+              ? "bg-green-50 border border-green-200" 
+              : "bg-red-50 border border-red-200"
+          }`}
         >
-          <Card className={`overflow-hidden border-2 ${passed ? "border-green-200 bg-gradient-to-br from-green-50 to-white" : "border-red-200 bg-gradient-to-br from-red-50 to-white"}`}>
-            <CardContent className="p-5">
-              <p className="text-sm text-zinc-500 font-medium mb-2">
-                {passed ? "Escrow Released" : "Stake Forfeited"}
-              </p>
-              <AmountDisplay
-                drops={stakeDrops}
-                variant="large"
-                prefix={passed ? "+" : "-"}
-              />
-            </CardContent>
-          </Card>
+          <p className={`text-xs font-medium uppercase tracking-wide mb-2 ${
+            passed ? "text-green-600" : "text-red-600"
+          }`}>
+            {passed ? "Escrow Released" : "Stake Forfeited"}
+          </p>
+          <AmountDisplay
+            drops={stakeDrops}
+            variant="large"
+            prefix={passed ? "+" : "-"}
+          />
         </motion.div>
 
         {/* Proof image */}
         {proofImage && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.35 }}
+            transition={{ delay: 0.15 }}
+            className="mb-6 rounded-xl overflow-hidden border border-[var(--vs-border)]"
           >
-            <Card className="overflow-hidden">
-              <div className="relative">
-                <img src={proofImage} alt="Proof" className="w-full aspect-video object-cover" />
-                <div className="absolute bottom-3 left-3">
-                  <TrustBadge variant="pinata" size="sm" />
-                </div>
-              </div>
-            </Card>
+            <img src={proofImage} alt="Proof" className="w-full aspect-video object-cover" />
           </motion.div>
         )}
 
-        {/* Verification trail */}
+        {/* Verification details */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
+          transition={{ delay: 0.2 }}
+          className="p-4 rounded-xl bg-white border border-[var(--vs-border)] mb-6"
         >
-          <Card>
-            <CardContent className="p-5">
-              <VerificationTrail
-                proofCid={proofCid}
-                escrowTxHash={challenge?.escrowTxHash}
-                settlementTxHash={settlementTx}
-                verification={{
-                  passed,
-                  confidence,
-                  reasoning,
-                }}
-              />
-            </CardContent>
-          </Card>
+          <h3 className="text-sm font-medium text-[var(--vs-text-primary)] mb-3">Verification Details</h3>
+          
+          <p className="text-sm text-[var(--vs-text-secondary)] mb-4">{reasoning}</p>
+
+          <div className="space-y-2 text-xs">
+            {proofCid && (
+              <div className="flex items-center justify-between py-2 border-t border-[var(--vs-border-subtle)]">
+                <span className="text-[var(--vs-text-tertiary)]">Proof CID</span>
+                <a 
+                  href={`https://gateway.pinata.cloud/ipfs/${proofCid}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-emerald-600 hover:text-emerald-700 flex items-center gap-1 font-mono"
+                >
+                  {proofCid.slice(0, 12)}...
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            )}
+            {settlementTx && (
+              <div className="flex items-center justify-between py-2 border-t border-[var(--vs-border-subtle)]">
+                <span className="text-[var(--vs-text-tertiary)]">Settlement TX</span>
+                <a 
+                  href={`https://testnet.xrpl.org/transactions/${settlementTx}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-emerald-600 hover:text-emerald-700 flex items-center gap-1 font-mono"
+                >
+                  {settlementTx.slice(0, 12)}...
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            )}
+          </div>
         </motion.div>
 
         {/* Share options */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
+          transition={{ delay: 0.25 }}
+          className="mb-6"
         >
           <ShareOptions
             challengeId={challengeId}
@@ -186,27 +199,22 @@ export default function ResultPage() {
 
         {/* Home button */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.55 }}
+          transition={{ delay: 0.3 }}
         >
           <Link href="/">
-            <Button className="w-full gap-2 h-12 rounded-xl bg-zinc-900 hover:bg-zinc-800">
+            <Button className="w-full h-12 gap-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white font-medium">
               <Home className="w-4 h-4" />
               Back to Home
             </Button>
           </Link>
         </motion.div>
 
-        {/* Trust pillars footer */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
-          className="pt-4"
-        >
-          <TrustPillars size="sm" />
-        </motion.div>
+        {/* Footer */}
+        <div className="mt-10 pt-6 border-t border-[var(--vs-border-subtle)]">
+          <TrustPillars />
+        </div>
       </main>
     </div>
   );

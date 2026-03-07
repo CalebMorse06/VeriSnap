@@ -3,12 +3,11 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Clock, MapPin, Camera, CheckCircle2, AlertTriangle, Zap } from "lucide-react";
+import { Clock, MapPin, Camera, CheckCircle2, AlertTriangle, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { TrustBadge } from "@/components/ui/trust-badge";
-import { AmountDisplay } from "@/components/ui/amount-display";
+import { TrustBadge, TrustPillars } from "@/components/ui/trust-badge";
 import { getChallenge, updateChallenge, ChallengeData } from "@/lib/store/challenges";
+import Link from "next/link";
 
 const FALLBACK: ChallengeData = {
   id: "campanile-1",
@@ -68,77 +67,114 @@ export default function AcceptChallengePage() {
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const xrpAmount = (challenge.stakeAmount / 1_000_000).toFixed(0);
+  const xrpAmount = challenge.stakeAmount / 1_000_000;
   const progress = (timeRemaining / (challenge.durationMinutes * 60)) * 100;
 
+  // Pre-accept state
   if (!accepted) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-zinc-900 to-zinc-800 flex flex-col items-center justify-center p-6">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm">
-          <Card className="bg-zinc-800/50 border-zinc-700 backdrop-blur-lg">
-            <CardContent className="p-6 text-center">
-              <motion.div
-                initial={{ scale: 0.8 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", stiffness: 200 }}
-                className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-5 shadow-lg shadow-purple-500/30"
-              >
-                <Zap className="w-10 h-10 text-white" />
-              </motion.div>
-
-              <h1 className="text-xl font-bold text-white mb-2">{challenge.title}</h1>
-              <p className="text-zinc-400 text-sm mb-6">{challenge.description}</p>
-
-              <div className="space-y-3 mb-6">
-                <div className="flex items-center justify-center gap-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                  <AmountDisplay drops={challenge.stakeAmount} variant="inline" />
-                  <span className="text-emerald-400 text-sm">at stake</span>
-                </div>
-
-                <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-700/50">
-                  <div className="flex items-center gap-2 text-zinc-300">
-                    <Clock className="w-4 h-4 text-orange-400" />
-                    <span className="text-sm">{challenge.durationMinutes} minute limit</span>
-                  </div>
-                  <TrustBadge variant="escrow" size="sm" animated={false} />
-                </div>
-
-                <div className="flex items-center gap-2 p-3 rounded-xl bg-zinc-700/50 text-zinc-300">
-                  <MapPin className="w-4 h-4 text-purple-400" />
-                  <span className="text-sm truncate">{challenge.location.name}</span>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 mb-6">
-                <div className="flex items-center gap-2 text-amber-300 text-sm">
-                  <AlertTriangle className="w-4 h-4" />
-                  <span>Timer starts immediately after accepting</span>
-                </div>
-              </div>
-
-              <Button
-                size="lg"
-                className="w-full text-lg h-14 gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                onClick={handleAccept}
-              >
-                <CheckCircle2 className="w-5 h-5" />
-                Accept Challenge
+      <div className="min-h-screen bg-[var(--vs-bg-primary)]">
+        {/* Header */}
+        <header className="bg-white border-b border-[var(--vs-border)] sticky top-0 z-50">
+          <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
+            <Link href={`/challenge/${id}`}>
+              <Button variant="ghost" size="icon" className="text-[var(--vs-text-secondary)] hover:text-[var(--vs-text-primary)] hover:bg-zinc-100 -ml-2">
+                <ChevronLeft className="w-5 h-5" />
               </Button>
-            </CardContent>
-          </Card>
-        </motion.div>
+            </Link>
+            <div>
+              <h1 className="text-lg font-semibold text-[var(--vs-text-primary)]">Accept Challenge</h1>
+              <p className="text-xs text-[var(--vs-text-tertiary)]">Review before accepting</p>
+            </div>
+          </div>
+        </header>
+
+        <main className="max-w-lg mx-auto px-4 py-6">
+          {/* Challenge details */}
+          <section className="mb-6 p-5 rounded-xl bg-white border border-[var(--vs-border)]">
+            <h2 className="text-lg font-semibold text-[var(--vs-text-primary)] mb-1">{challenge.title}</h2>
+            <p className="text-sm text-[var(--vs-text-secondary)] mb-4">{challenge.description}</p>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between py-2 border-b border-[var(--vs-border-subtle)]">
+                <span className="text-sm text-[var(--vs-text-secondary)]">Stake</span>
+                <span className="font-semibold text-[var(--vs-text-primary)]">{xrpAmount} XRP</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-[var(--vs-border-subtle)]">
+                <span className="text-sm text-[var(--vs-text-secondary)]">Time Limit</span>
+                <span className="flex items-center gap-1.5 text-[var(--vs-text-primary)]">
+                  <Clock className="w-4 h-4 text-amber-500" />
+                  {challenge.durationMinutes} minutes
+                </span>
+              </div>
+              <div className="flex items-center justify-between py-2">
+                <span className="text-sm text-[var(--vs-text-secondary)]">Location</span>
+                <span className="flex items-center gap-1.5 text-[var(--vs-text-primary)] text-sm">
+                  <MapPin className="w-4 h-4 text-[var(--vs-text-tertiary)]" />
+                  {challenge.location.name.split(",")[0]}
+                </span>
+              </div>
+            </div>
+          </section>
+
+          {/* Objective */}
+          <section className="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200">
+            <p className="text-xs font-medium text-emerald-700 uppercase tracking-wide mb-1">Your Objective</p>
+            <p className="text-sm text-emerald-900">{challenge.objective}</p>
+          </section>
+
+          {/* Warning */}
+          <section className="mb-6 p-4 rounded-xl bg-amber-50 border border-amber-200">
+            <div className="flex gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+              <div>
+                <p className="font-medium text-amber-900 text-sm">Timer starts immediately</p>
+                <p className="text-xs text-amber-700 mt-0.5">
+                  Once you accept, you have {challenge.durationMinutes} minutes to capture and submit proof.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* Escrow badge */}
+          <section className="mb-6 flex justify-center">
+            <TrustBadge variant="escrow" size="md" />
+          </section>
+
+          {/* Accept button */}
+          <Button
+            size="lg"
+            className="w-full h-12 gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+            onClick={handleAccept}
+          >
+            <CheckCircle2 className="w-5 h-5" />
+            Accept Challenge
+          </Button>
+
+          {/* Footer */}
+          <div className="mt-10 pt-6 border-t border-[var(--vs-border-subtle)]">
+            <TrustPillars />
+          </div>
+        </main>
       </div>
     );
   }
 
+  // Active timer state
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-900 to-zinc-800 flex flex-col">
-      {/* Timer header */}
-      <div className={`p-4 ${isExpired ? "bg-red-600" : timeRemaining < 60 ? "bg-orange-500" : "bg-zinc-800"}`}>
-        <div className="max-w-sm mx-auto">
-          <div className="h-2 bg-black/20 rounded-full overflow-hidden">
+    <div className="min-h-screen bg-[var(--vs-bg-primary)] flex flex-col">
+      {/* Timer bar */}
+      <div className={`py-4 px-4 ${isExpired ? "bg-red-500" : timeRemaining < 60 ? "bg-amber-500" : "bg-emerald-600"}`}>
+        <div className="max-w-lg mx-auto">
+          <div className="flex items-center justify-between text-white mb-2">
+            <span className="text-sm font-medium">
+              {isExpired ? "Time expired" : timeRemaining < 60 ? "Hurry!" : "Time remaining"}
+            </span>
+            <span className="font-mono font-bold text-lg">{formatTime(timeRemaining)}</span>
+          </div>
+          <div className="h-1.5 bg-white/30 rounded-full overflow-hidden">
             <motion.div
-              className={`h-full ${isExpired ? "bg-red-300" : timeRemaining < 60 ? "bg-orange-300" : "bg-emerald-400"}`}
+              className="h-full bg-white"
               initial={{ width: "100%" }}
               animate={{ width: `${progress}%` }}
               transition={{ duration: 0.5 }}
@@ -147,54 +183,52 @@ export default function AcceptChallengePage() {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center p-6">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-sm text-center"
-        >
-          {/* Timer */}
-          <motion.div
-            animate={{ scale: timeRemaining < 60 ? [1, 1.03, 1] : 1 }}
-            transition={{ repeat: timeRemaining < 60 ? Infinity : 0, duration: 1 }}
-            className={`text-7xl font-mono font-bold mb-4 tracking-tight ${
-              isExpired ? "text-red-500" : timeRemaining < 60 ? "text-orange-400" : "text-white"
-            }`}
-          >
-            {formatTime(timeRemaining)}
-          </motion.div>
+      {/* Content */}
+      <main className="flex-1 max-w-lg mx-auto px-4 py-8 w-full">
+        <div className="text-center mb-8">
+          <h1 className="text-xl font-semibold text-[var(--vs-text-primary)] mb-2">{challenge.title}</h1>
+          <p className="text-sm text-[var(--vs-text-secondary)]">{challenge.objective}</p>
+        </div>
 
-          <p className="text-zinc-400 mb-6">
-            {isExpired ? "Time's up!" : timeRemaining < 60 ? "Hurry!" : "Time remaining"}
+        {/* Stake at risk */}
+        <div className={`p-4 rounded-xl text-center mb-6 ${
+          isExpired 
+            ? "bg-red-50 border border-red-200" 
+            : "bg-amber-50 border border-amber-200"
+        }`}>
+          <p className={`text-xs font-medium uppercase tracking-wide mb-1 ${
+            isExpired ? "text-red-600" : "text-amber-600"
+          }`}>
+            {isExpired ? "Stake forfeited" : "Stake at risk"}
           </p>
+          <p className={`text-2xl font-semibold ${isExpired ? "text-red-700" : "text-amber-700"}`}>
+            {xrpAmount} XRP
+          </p>
+        </div>
 
-          <Card className={`mb-6 ${isExpired ? "bg-red-900/30 border-red-700" : "bg-zinc-800/50 border-zinc-700"}`}>
-            <CardContent className="p-4">
-              <h2 className="text-white font-semibold mb-2">{challenge.title}</h2>
-              <p className="text-zinc-400 text-sm">{challenge.objective}</p>
-            </CardContent>
-          </Card>
-
-          {!isExpired ? (
-            <Button
-              size="lg"
-              className="w-full text-lg h-14 gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 shadow-lg shadow-emerald-500/30"
-              onClick={() => router.push(`/challenge/${id}/capture`)}
+        {/* Action */}
+        {!isExpired ? (
+          <Button
+            size="lg"
+            className="w-full h-14 gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-lg"
+            onClick={() => router.push(`/challenge/${id}/capture`)}
+          >
+            <Camera className="w-5 h-5" />
+            Capture Proof
+          </Button>
+        ) : (
+          <div className="space-y-4 text-center">
+            <p className="text-red-600 font-medium">Challenge failed — time expired</p>
+            <Button 
+              variant="outline" 
+              className="w-full rounded-lg border-[var(--vs-border)]" 
+              onClick={() => router.push("/")}
             >
-              <Camera className="w-5 h-5" />
-              Capture Proof
+              Return Home
             </Button>
-          ) : (
-            <div className="space-y-3">
-              <p className="text-red-400 font-medium">Challenge expired!</p>
-              <p className="text-zinc-500 text-sm">Your stake has been forfeited</p>
-              <Button variant="outline" className="w-full rounded-xl" onClick={() => router.push("/")}>
-                Return Home
-              </Button>
-            </div>
-          )}
-        </motion.div>
-      </div>
+          </div>
+        )}
+      </main>
     </div>
   );
 }

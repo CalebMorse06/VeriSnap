@@ -3,17 +3,18 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload, Brain, CheckCircle2, Loader2, AlertCircle, Database, Coins, ArrowLeft } from "lucide-react";
+import { CheckCircle2, Loader2, AlertCircle, Database, Cpu, Lock, ChevronLeft } from "lucide-react";
 import { getChallenge, updateChallenge } from "@/lib/store/challenges";
-import { TrustBadge } from "@/components/ui/trust-badge";
+import { TrustBadge, TrustPillars } from "@/components/ui/trust-badge";
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
 type VerifyStep = "uploading" | "analyzing" | "resolving" | "complete" | "error";
 
 const steps = [
-  { key: "uploading" as const, label: "Uploading to Pinata", sublabel: "Private IPFS storage", icon: Database, color: "purple" },
-  { key: "analyzing" as const, label: "AI Verification", sublabel: "Gemini 2.0 Flash", icon: Brain, color: "blue" },
-  { key: "resolving" as const, label: "XRPL Settlement", sublabel: "EscrowFinish transaction", icon: Coins, color: "emerald" },
+  { key: "uploading" as const, label: "Uploading Proof", sublabel: "Private IPFS via Pinata", icon: Database },
+  { key: "analyzing" as const, label: "AI Verification", sublabel: "Gemini 2.0 Flash", icon: Cpu },
+  { key: "resolving" as const, label: "Settlement", sublabel: "XRPL EscrowFinish", icon: Lock },
 ];
 
 interface VerificationResult {
@@ -60,7 +61,7 @@ export default function VerifyPage() {
       setCurrentStep("analyzing");
 
       const challenge = getChallenge(challengeId);
-      const challengeObjective = challenge?.objective ?? "Take a clear photo showing the KU Campanile bell tower";
+      const challengeObjective = challenge?.objective ?? "Take a clear photo showing the challenge objective";
 
       const response = await fetch("/api/verify", {
         method: "POST",
@@ -118,114 +119,117 @@ export default function VerifyPage() {
 
   const currentStepIndex = steps.findIndex((s) => s.key === currentStep);
 
-  const colorMap: Record<string, { bg: string; text: string }> = {
-    purple: { bg: "bg-purple-500", text: "text-purple-500" },
-    blue: { bg: "bg-blue-500", text: "text-blue-500" },
-    emerald: { bg: "bg-emerald-500", text: "text-emerald-500" },
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-800 to-zinc-900 flex flex-col">
+    <div className="min-h-screen bg-[var(--vs-bg-primary)] flex flex-col">
       {/* Header */}
-      <div className="px-4 py-3 flex items-center gap-3">
-        <Link href={`/challenge/${challengeId}`} className="w-10 h-10 rounded-full bg-zinc-700/50 flex items-center justify-center">
-          <ArrowLeft className="w-5 h-5 text-zinc-400" />
-        </Link>
-        <div>
-          <h1 className="text-white font-semibold">Verifying Proof</h1>
-          <p className="text-zinc-500 text-xs">Processing your submission</p>
+      <header className="bg-white border-b border-[var(--vs-border)]">
+        <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
+          <Link href={`/challenge/${challengeId}`}>
+            <Button variant="ghost" size="icon" className="text-[var(--vs-text-secondary)] hover:text-[var(--vs-text-primary)] hover:bg-zinc-100 -ml-2">
+              <ChevronLeft className="w-5 h-5" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-lg font-semibold text-[var(--vs-text-primary)]">Verifying</h1>
+            <p className="text-xs text-[var(--vs-text-tertiary)]">Processing your proof</p>
+          </div>
         </div>
-      </div>
+      </header>
 
-      <div className="flex-1 flex flex-col items-center justify-center p-6">
+      <main className="flex-1 max-w-lg mx-auto px-4 py-8 w-full">
         {/* Proof preview */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
+          initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="w-40 h-40 rounded-2xl overflow-hidden mb-10 shadow-2xl ring-4 ring-zinc-700/50 relative"
+          className="w-32 h-32 rounded-xl overflow-hidden mx-auto mb-8 border border-[var(--vs-border)] shadow-sm relative"
         >
           {proofImage ? (
             <img src={proofImage} alt="Proof" className="w-full h-full object-cover" />
           ) : (
-            <div className="w-full h-full bg-zinc-700 animate-pulse" />
+            <div className="w-full h-full bg-zinc-100 animate-pulse" />
           )}
-          <div className="absolute bottom-2 right-2">
-            <TrustBadge variant="private" size="sm" animated={false} />
-          </div>
         </motion.div>
 
         {/* Error state */}
         {currentStep === "error" && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center mb-8 max-w-xs">
-            <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
-              <AlertCircle className="w-8 h-8 text-red-400" />
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center mb-8">
+            <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="w-6 h-6 text-red-500" />
             </div>
-            <p className="text-red-400 font-medium mb-2">Verification Failed</p>
-            {error && <p className="text-zinc-400 text-sm mb-4">{error}</p>}
+            <p className="text-red-600 font-medium mb-2">Verification Failed</p>
+            {error && <p className="text-[var(--vs-text-secondary)] text-sm mb-6">{error}</p>}
             <div className="flex gap-3 justify-center">
-              <button
-                className="px-4 py-2.5 text-sm rounded-xl bg-zinc-700 text-white font-medium"
+              <Button
+                variant="outline"
+                className="border-[var(--vs-border)]"
                 onClick={() => router.push(`/challenge/${challengeId}/capture`)}
               >
                 Retake Proof
-              </button>
-              <button
-                className="px-4 py-2.5 text-sm rounded-xl bg-blue-600 text-white font-medium"
+              </Button>
+              <Button
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
                 onClick={() => window.location.reload()}
               >
                 Retry
-              </button>
+              </Button>
             </div>
           </motion.div>
         )}
 
         {/* Progress steps */}
         {currentStep !== "error" && (
-          <div className="space-y-4 w-full max-w-sm">
+          <div className="space-y-3">
             {steps.map((step, index) => {
               const isActive = index === currentStepIndex;
               const isComplete = index < currentStepIndex || currentStep === "complete";
               const Icon = step.icon;
-              const colors = colorMap[step.color];
 
               return (
                 <motion.div
                   key={step.key}
-                  initial={{ opacity: 0, x: -20 }}
+                  initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className={`p-4 rounded-2xl border transition-all duration-500 ${
+                  className={`p-4 rounded-xl border transition-all ${
                     isComplete
-                      ? "bg-zinc-800/50 border-green-500/30"
+                      ? "bg-green-50 border-green-200"
                       : isActive
-                      ? "bg-zinc-800 border-zinc-600"
-                      : "bg-zinc-800/30 border-zinc-700/50"
+                      ? "bg-white border-emerald-200 shadow-sm"
+                      : "bg-zinc-50 border-zinc-100"
                   }`}
                 >
                   <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-500 ${
-                      isComplete ? "bg-green-500" : isActive ? colors.bg : "bg-zinc-700"
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all ${
+                      isComplete 
+                        ? "bg-green-500" 
+                        : isActive 
+                        ? "bg-emerald-600" 
+                        : "bg-zinc-200"
                     }`}>
                       <AnimatePresence mode="wait">
                         {isActive && !isComplete ? (
                           <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                            <Loader2 className="w-6 h-6 text-white animate-spin" />
+                            <Loader2 className="w-5 h-5 text-white animate-spin" />
                           </motion.div>
                         ) : isComplete ? (
                           <motion.div key="check" initial={{ scale: 0 }} animate={{ scale: 1 }}>
-                            <CheckCircle2 className="w-6 h-6 text-white" />
+                            <CheckCircle2 className="w-5 h-5 text-white" />
                           </motion.div>
                         ) : (
-                          <Icon className="w-6 h-6 text-zinc-400" />
+                          <Icon className="w-5 h-5 text-zinc-400" />
                         )}
                       </AnimatePresence>
                     </div>
 
                     <div className="flex-1">
-                      <p className={`font-medium ${isComplete || isActive ? "text-white" : "text-zinc-500"}`}>
+                      <p className={`font-medium text-sm ${
+                        isComplete || isActive ? "text-[var(--vs-text-primary)]" : "text-[var(--vs-text-tertiary)]"
+                      }`}>
                         {step.label}
                       </p>
-                      <p className={`text-sm ${isComplete ? "text-green-400" : isActive ? colors.text : "text-zinc-600"}`}>
+                      <p className={`text-xs ${
+                        isComplete ? "text-green-600" : isActive ? "text-emerald-600" : "text-[var(--vs-text-tertiary)]"
+                      }`}>
                         {isComplete ? "Complete" : isActive ? "Processing..." : step.sublabel}
                       </p>
                     </div>
@@ -241,22 +245,31 @@ export default function VerifyPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`mt-8 p-5 rounded-2xl ${result.passed ? "bg-green-500/20 border border-green-500/30" : "bg-red-500/20 border border-red-500/30"}`}
+            className={`mt-6 p-5 rounded-xl text-center ${
+              result.passed 
+                ? "bg-green-50 border border-green-200" 
+                : "bg-red-50 border border-red-200"
+            }`}
           >
-            <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${result.passed ? "bg-green-500" : "bg-red-500"}`}>
-                <CheckCircle2 className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <p className={`font-semibold ${result.passed ? "text-green-400" : "text-red-400"}`}>
-                  {result.passed ? "Challenge Passed!" : "Challenge Failed"}
-                </p>
-                <p className="text-zinc-400 text-sm">Confidence: {result.confidence}%</p>
-              </div>
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 ${
+              result.passed ? "bg-green-500" : "bg-red-500"
+            }`}>
+              <CheckCircle2 className="w-6 h-6 text-white" />
             </div>
+            <p className={`font-semibold ${result.passed ? "text-green-700" : "text-red-700"}`}>
+              {result.passed ? "Challenge Passed!" : "Challenge Failed"}
+            </p>
+            <p className="text-[var(--vs-text-secondary)] text-sm mt-1">
+              {result.confidence}% confidence
+            </p>
           </motion.div>
         )}
-      </div>
+
+        {/* Footer */}
+        <div className="mt-10 pt-6 border-t border-[var(--vs-border-subtle)]">
+          <TrustPillars />
+        </div>
+      </main>
     </div>
   );
 }
