@@ -2,85 +2,99 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { motion } from "framer-motion";
-import { ArrowLeft, MapPin, Coins, Clock, Zap, Loader2 } from "lucide-react";
+import { ChevronLeft, MapPin, Clock, Coins, Zap, Sparkles, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
+import { createChallenge } from "@/lib/store/challenges";
 
-const schema = z.object({
-  title: z.string().min(5, "Title must be at least 5 characters"),
-  description: z.string().min(10, "Describe the challenge clearly"),
-  objective: z.string().min(20, "Be specific — what must the photo show?"),
-  location: z.string().min(3, "Add a location name"),
-  stakeAmount: z.number().min(1, "Minimum 1 XRP").max(1000, "Max 1000 XRP"),
-  durationHours: z.number().min(1).max(168),
-});
-
-type FormData = z.infer<typeof schema>;
-
+// Preset challenges for quick demo
 const PRESETS = [
   {
+    id: "campanile",
+    name: "KU Campanile",
     title: "Visit the KU Campanile",
-    description: "Prove you're at the iconic KU Campanile tower on campus",
-    objective: "Take a clear photo showing the KU Campanile bell tower with you visible in frame",
-    location: "KU Campanile, Lawrence, KS",
+    description: "Prove you're at the iconic KU Campanile bell tower.",
+    objective: "Take a clear photo showing the KU Campanile bell tower",
+    location: { name: "KU Campanile, Lawrence, KS", lat: 38.9543, lng: -95.2558 },
     stakeAmount: 20,
-    durationHours: 1,
+    durationMinutes: 20,
+    emoji: "🔔",
+  },
+  {
+    id: "coffee",
+    name: "Coffee Run",
+    title: "Get a Coffee",
+    description: "Prove you bought a coffee from a local coffee shop.",
+    objective: "Take a photo of your coffee cup with the shop logo visible",
+    location: { name: "Any local coffee shop", lat: 0, lng: 0 },
+    stakeAmount: 5,
+    durationMinutes: 30,
+    emoji: "☕",
+  },
+  {
+    id: "workout",
+    name: "Gym Check-in",
+    title: "Hit the Gym",
+    description: "Prove you made it to the gym for a workout.",
+    objective: "Take a photo inside the gym showing equipment or your workout area",
+    location: { name: "Your local gym", lat: 0, lng: 0 },
+    stakeAmount: 10,
+    durationMinutes: 60,
+    emoji: "💪",
   },
 ];
 
 export default function CreateChallengePage() {
   const router = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedPreset, setSelectedPreset] = useState<string | null>("campanile");
+  const [isCustom, setIsCustom] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  
+  // Form state
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [objective, setObjective] = useState("");
+  const [locationName, setLocationName] = useState("");
+  const [stakeAmount, setStakeAmount] = useState(10);
+  const [duration, setDuration] = useState(20);
 
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    formState: { errors },
-  } = useForm<FormData>({
-    resolver: zodResolver(schema),
-    defaultValues: {
-      stakeAmount: 20,
-      durationHours: 1,
-    },
-  });
+  const preset = PRESETS.find(p => p.id === selectedPreset);
 
-  const stakeAmount = watch("stakeAmount");
-
-  const loadPreset = (preset: typeof PRESETS[0]) => {
-    setValue("title", preset.title);
-    setValue("description", preset.description);
-    setValue("objective", preset.objective);
-    setValue("location", preset.location);
-    setValue("stakeAmount", preset.stakeAmount);
-    setValue("durationHours", preset.durationHours);
-  };
-
-  const onSubmit = async (data: FormData) => {
-    setIsSubmitting(true);
+  const handleCreate = async () => {
+    setIsCreating(true);
+    
     try {
-      // In production: call API to create challenge + XRPL EscrowCreate
-      // For demo: store in sessionStorage and navigate
-      const challenge = {
-        id: `challenge-${Date.now()}`,
-        ...data,
-        status: "FUNDED",
-        createdAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + data.durationHours * 3600 * 1000).toISOString(),
-        // Mock XRPL data
-        xrpTxHash: `ESCROW_${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
-        escrowSequence: Math.floor(Math.random() * 1000000),
+      const data = isCustom ? {
+        title: title || "Custom Challenge",
+        description: description || "Complete this challenge",
+        objective: objective || "Submit photo proof",
+        location: { name: locationName || "Specified location", lat: 0, lng: 0 },
+        stakeAmount: stakeAmount * 1_000_000,
+        durationMinutes: duration,
+        creatorAddress: "rDemoUser",
+      } : {
+        title: preset!.title,
+        description: preset!.description,
+        objective: preset!.objective,
+        location: preset!.location,
+        stakeAmount: preset!.stakeAmount * 1_000_000,
+        durationMinutes: preset!.durationMinutes,
+        creatorAddress: "rDemoUser",
       };
-      sessionStorage.setItem("activeChallenge", JSON.stringify(challenge));
-      router.push("/");
-    } finally {
-      setIsSubmitting(false);
+
+      const challenge = createChallenge(data);
+      
+      // Simulate XRPL escrow creation delay
+      await new Promise(r => setTimeout(r, 1500));
+      
+      router.push(`/challenge/${challenge.id}`);
+    } catch (error) {
+      console.error("Failed to create challenge:", error);
+      setIsCreating(false);
     }
   };
 
@@ -88,156 +102,238 @@ export default function CreateChallengePage() {
     <div className="min-h-screen bg-zinc-50">
       {/* Header */}
       <header className="bg-white border-b sticky top-0 z-50">
-        <div className="max-w-lg mx-auto px-4 py-4 flex items-center gap-3">
-          <button onClick={() => router.back()} className="p-2 -ml-2 hover:bg-zinc-100 rounded-lg">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <span className="font-semibold">Create Challenge</span>
+        <div className="max-w-lg mx-auto px-4 py-4 flex items-center gap-4">
+          <Link href="/">
+            <button className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center">
+              <ChevronLeft className="w-5 h-5 text-zinc-700" />
+            </button>
+          </Link>
+          <div>
+            <h1 className="text-lg font-semibold">Create Challenge</h1>
+            <p className="text-xs text-zinc-500">Set up a new VeriSnap challenge</p>
+          </div>
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto px-4 py-6 space-y-6">
-        {/* Quick preset */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <p className="text-sm font-medium text-zinc-500 mb-3">Quick Start</p>
-          {PRESETS.map((preset) => (
-            <button
-              key={preset.title}
-              onClick={() => loadPreset(preset)}
-              className="w-full text-left p-4 rounded-xl bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-100 hover:border-blue-300 transition-colors"
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <Zap className="w-4 h-4 text-blue-500" />
-                <span className="text-sm font-semibold text-blue-700">Demo: KU Campanile</span>
-              </div>
-              <p className="text-xs text-zinc-500">{preset.description}</p>
-            </button>
-          ))}
+      <main className="max-w-lg mx-auto px-4 py-6">
+        {/* Quick presets */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6"
+        >
+          <h2 className="text-sm font-medium text-zinc-700 mb-3 flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-yellow-500" />
+            Quick Presets
+          </h2>
+          <div className="grid grid-cols-3 gap-3">
+            {PRESETS.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => {
+                  setSelectedPreset(p.id);
+                  setIsCustom(false);
+                }}
+                className={`p-3 rounded-xl text-center transition-all ${
+                  selectedPreset === p.id && !isCustom
+                    ? "bg-blue-100 border-2 border-blue-500"
+                    : "bg-white border-2 border-zinc-200 hover:border-zinc-300"
+                }`}
+              >
+                <span className="text-2xl">{p.emoji}</span>
+                <p className="text-xs font-medium text-zinc-700 mt-1">{p.name}</p>
+                <p className="text-xs text-zinc-500">{p.stakeAmount} XRP</p>
+              </button>
+            ))}
+          </div>
         </motion.div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-            <Card>
-              <CardContent className="p-5 space-y-4">
-                <h3 className="font-semibold text-zinc-900">Challenge Details</h3>
-
-                <div>
-                  <label className="text-sm font-medium text-zinc-700 mb-1.5 block">Title</label>
-                  <Input {...register("title")} placeholder="Visit the KU Campanile" />
-                  {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title.message}</p>}
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-zinc-700 mb-1.5 block">Description</label>
-                  <Input {...register("description")} placeholder="Describe the challenge..." />
-                  {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description.message}</p>}
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-zinc-700 mb-1.5 block">
-                    Proof Objective
-                    <span className="text-zinc-400 ml-1 font-normal">(what must the photo show?)</span>
-                  </label>
-                  <Input {...register("objective")} placeholder="Take a photo clearly showing the Campanile tower..." />
-                  {errors.objective && <p className="text-red-500 text-xs mt-1">{errors.objective.message}</p>}
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-zinc-700 mb-1.5 block">
-                    <MapPin className="w-4 h-4 inline mr-1" />
-                    Location
-                  </label>
-                  <Input {...register("location")} placeholder="KU Campanile, Lawrence, KS" />
-                  {errors.location && <p className="text-red-500 text-xs mt-1">{errors.location.message}</p>}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-            <Card>
-              <CardContent className="p-5 space-y-4">
-                <h3 className="font-semibold text-zinc-900">Stake & Duration</h3>
-
-                <div>
-                  <label className="text-sm font-medium text-zinc-700 mb-1.5 block">
-                    <Coins className="w-4 h-4 inline mr-1" />
-                    Stake Amount (XRP)
-                  </label>
-                  <Input
-                    {...register("stakeAmount", { valueAsNumber: true })}
-                    type="number"
-                    min={1}
-                    placeholder="20"
-                  />
-                  {errors.stakeAmount && <p className="text-red-500 text-xs mt-1">{errors.stakeAmount.message}</p>}
-                </div>
-
-                {/* Quick stake presets */}
-                <div className="flex gap-2">
-                  {[5, 20, 50, 100].map(xrp => (
-                    <button
-                      key={xrp}
-                      type="button"
-                      onClick={() => setValue("stakeAmount", xrp)}
-                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                        stakeAmount === xrp
-                          ? "bg-zinc-900 text-white"
-                          : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
-                      }`}
-                    >
-                      {xrp} XRP
-                    </button>
-                  ))}
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-zinc-700 mb-1.5 block">
-                    <Clock className="w-4 h-4 inline mr-1" />
-                    Time Window (hours)
-                  </label>
-                  <Input
-                    {...register("durationHours", { valueAsNumber: true })}
-                    type="number"
-                    min={1}
-                    max={168}
-                    placeholder="1"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* XRPL callout */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-            <Card className="bg-zinc-900">
+        {/* Selected preset details */}
+        {preset && !isCustom && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            <Card className="mb-4">
               <CardContent className="p-4">
-                <p className="text-sm text-zinc-400">
-                  <span className="text-white font-medium">XRPL Escrow</span> will lock{" "}
-                  <span className="text-green-400 font-semibold">{stakeAmount || 0} XRP</span> on-chain.
-                  Funds release automatically when proof is verified — or refund if expired.
-                </p>
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <h3 className="font-semibold text-zinc-900">{preset.title}</h3>
+                    <p className="text-sm text-zinc-600">{preset.description}</p>
+                  </div>
+                  <Badge className="bg-green-500">Ready</Badge>
+                </div>
+                
+                <div className="grid grid-cols-3 gap-4 pt-3 border-t">
+                  <div className="text-center">
+                    <MapPin className="w-4 h-4 text-purple-500 mx-auto mb-1" />
+                    <p className="text-xs text-zinc-500 truncate">{preset.location.name.split(",")[0]}</p>
+                  </div>
+                  <div className="text-center">
+                    <Clock className="w-4 h-4 text-orange-500 mx-auto mb-1" />
+                    <p className="text-xs text-zinc-500">{preset.durationMinutes} min</p>
+                  </div>
+                  <div className="text-center">
+                    <Coins className="w-4 h-4 text-green-500 mx-auto mb-1" />
+                    <p className="text-xs text-zinc-500">{preset.stakeAmount} XRP</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </motion.div>
+        )}
 
-          {/* Submit */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-            <Button
-              type="submit"
-              size="lg"
-              className="w-full text-lg py-6"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <><Loader2 className="w-5 h-5 animate-spin mr-2" />Creating on XRPL...</>
-              ) : (
-                <><Zap className="w-5 h-5 mr-2" />Create & Lock Stake</>
-              )}
-            </Button>
+        {/* Or create custom */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="mb-6"
+        >
+          <button
+            onClick={() => {
+              setIsCustom(true);
+              setSelectedPreset(null);
+            }}
+            className={`w-full p-4 rounded-xl text-left transition-all ${
+              isCustom
+                ? "bg-blue-100 border-2 border-blue-500"
+                : "bg-white border-2 border-dashed border-zinc-300 hover:border-zinc-400"
+            }`}
+          >
+            <p className="font-medium text-zinc-700">✨ Create Custom Challenge</p>
+            <p className="text-sm text-zinc-500">Define your own objective and stake</p>
+          </button>
+        </motion.div>
+
+        {/* Custom form */}
+        {isCustom && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            className="space-y-4 mb-6"
+          >
+            <div>
+              <label className="text-sm font-medium text-zinc-700 block mb-1">Challenge Title</label>
+              <Input 
+                placeholder="e.g., Visit the Library"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-zinc-700 block mb-1">Description</label>
+              <Input 
+                placeholder="What is this challenge about?"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-zinc-700 block mb-1">Proof Objective</label>
+              <Input 
+                placeholder="What should the photo show?"
+                value={objective}
+                onChange={(e) => setObjective(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-zinc-700 block mb-1">Location</label>
+              <Input 
+                placeholder="Where should they go?"
+                value={locationName}
+                onChange={(e) => setLocationName(e.target.value)}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-zinc-700 block mb-1">Stake (XRP)</label>
+                <Input 
+                  type="number"
+                  min={1}
+                  max={1000}
+                  value={stakeAmount}
+                  onChange={(e) => setStakeAmount(parseInt(e.target.value) || 10)}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-zinc-700 block mb-1">Duration (min)</label>
+                <Input 
+                  type="number"
+                  min={5}
+                  max={120}
+                  value={duration}
+                  onChange={(e) => setDuration(parseInt(e.target.value) || 20)}
+                />
+              </div>
+            </div>
           </motion.div>
-        </form>
+        )}
+
+        {/* XRPL callout */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Card className="mb-6 bg-green-50 border-green-200">
+            <CardContent className="p-4">
+              <div className="flex gap-3">
+                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                  <Coins className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-green-900">XRPL Escrow</p>
+                  <p className="text-sm text-green-700">
+                    Your stake will be locked in an XRPL escrow contract with automatic settlement based on AI verification.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Demo notice */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.25 }}
+          className="mb-6"
+        >
+          <div className="flex gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <AlertCircle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-yellow-800">
+              <strong>Demo Mode:</strong> No real XRP will be transferred. This uses XRPL Testnet for demonstration.
+            </p>
+          </div>
+        </motion.div>
+
+        {/* Create button */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <Button
+            size="lg"
+            className="w-full text-lg h-14 gap-2"
+            onClick={handleCreate}
+            disabled={isCreating || (!preset && !isCustom)}
+          >
+            {isCreating ? (
+              <>
+                <span className="animate-spin">⚡</span>
+                Creating Escrow...
+              </>
+            ) : (
+              <>
+                <Zap className="w-5 h-5" />
+                Create Challenge
+              </>
+            )}
+          </Button>
+        </motion.div>
       </main>
     </div>
   );

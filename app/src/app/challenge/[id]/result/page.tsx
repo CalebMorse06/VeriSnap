@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams, useSearchParams } from "next/navigation";
+import { getChallenge, updateChallenge } from "@/lib/store/challenges";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { CheckCircle2, XCircle, ExternalLink, Share2, Home, Coins, Shield, FileImage } from "lucide-react";
@@ -20,11 +21,15 @@ interface VerificationData {
 export default function ResultPage() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const challengeId = params.id as string;
+  const challenge = getChallenge(challengeId);
   const passed = searchParams.get("passed") === "true";
   const [proofImage, setProofImage] = useState<string | null>(null);
   const [verification, setVerification] = useState<VerificationData | null>(null);
 
   useEffect(() => {
+    updateChallenge(challengeId, { status: "SETTLED" });
+
     // Get proof from session
     const proofData = sessionStorage.getItem("proofData");
     if (proofData) {
@@ -44,14 +49,15 @@ export default function ResultPage() {
         confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
       }, 500);
     }
-  }, [passed]);
+  }, [passed, challengeId]);
 
   const confidence = verification?.confidence ?? (passed ? 94 : 32);
   const reasoning = verification?.reasoning ?? (passed 
-    ? "The submitted image clearly shows the KU Campanile bell tower."
-    : "Unable to verify the KU Campanile in the submitted image.");
-  const proofCid = verification?.proofCid ?? "Qm" + Math.random().toString(36).substring(2, 10);
-  const settlementTx = verification?.settlementTx ?? "DEMO_TX_" + Date.now();
+    ? "The submitted image clearly shows the challenge objective."
+    : "Unable to verify the challenge objective in the submitted image.");
+  const proofCid = verification?.proofCid ?? challenge?.proofCid ?? `QmDEMO${challengeId.replace(/[^a-zA-Z0-9]/g, "")}`;
+  const settlementTx = verification?.settlementTx ?? challenge?.settlementTx ?? `DEMO_TX_${challengeId}`;
+  const stakeXrp = ((challenge?.stakeAmount ?? 20_000_000) / 1_000_000).toFixed(2);
 
   return (
     <div className={`min-h-screen ${passed ? "bg-gradient-to-b from-green-50 to-white" : "bg-gradient-to-b from-red-50 to-white"}`}>
@@ -124,7 +130,7 @@ export default function ResultPage() {
                     {passed ? "Escrow Released" : "Escrow Forfeited"}
                   </p>
                   <p className="text-2xl font-bold">
-                    {passed ? "+20.00 XRP" : "-20.00 XRP"}
+                    {passed ? `+${stakeXrp} XRP` : `-${stakeXrp} XRP`}
                   </p>
                 </div>
               </div>
