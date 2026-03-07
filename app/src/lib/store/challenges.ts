@@ -69,18 +69,39 @@ export function getChallenge(id: string): ChallengeData | null {
 
 export function saveChallenge(challenge: ChallengeData): void {
   if (typeof window === "undefined") return;
-  
+
   const challenges = getChallenges().filter(c => c.id !== challenge.id);
   challenges.unshift(challenge);
   sessionStorage.setItem(STORAGE_KEY, JSON.stringify(challenges));
 }
 
+async function mirrorCreateToApi(challenge: ChallengeData) {
+  try {
+    await fetch("/api/challenges", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(challenge),
+    });
+  } catch {}
+}
+
+async function mirrorPatchToApi(id: string, updates: Partial<ChallengeData>) {
+  try {
+    await fetch(`/api/challenges/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updates),
+    });
+  } catch {}
+}
+
 export function updateChallenge(id: string, updates: Partial<ChallengeData>): ChallengeData | null {
   const challenge = getChallenge(id);
   if (!challenge) return null;
-  
+
   const updated = { ...challenge, ...updates };
   saveChallenge(updated);
+  if (typeof window !== "undefined") void mirrorPatchToApi(id, updates);
   return updated;
 }
 
@@ -92,8 +113,9 @@ export function createChallenge(data: Omit<ChallengeData, "id" | "status" | "cre
     createdAt: Date.now(),
     expiresAt: Date.now() + 86400000, // 24 hours
   };
-  
+
   saveChallenge(challenge);
+  if (typeof window !== "undefined") void mirrorCreateToApi(challenge);
   return challenge;
 }
 

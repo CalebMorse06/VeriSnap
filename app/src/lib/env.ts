@@ -18,6 +18,7 @@ export function getRuntimeConfig() {
     pinataConfigured: Boolean(process.env.PINATA_JWT),
     geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
     xrplConfigured: Boolean(process.env.XRPL_APP_WALLET_ADDRESS && process.env.XRPL_APP_WALLET_SEED),
+    supabaseConfigured: Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY),
     xrplServer: process.env.XRPL_SERVER || "wss://s.altnet.rippletest.net:51233",
   };
 }

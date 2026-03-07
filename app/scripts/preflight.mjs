@@ -9,6 +9,8 @@ const required = [
   "XRPL_SERVER",
   "XRPL_APP_WALLET_ADDRESS",
   "XRPL_APP_WALLET_SEED",
+  "SUPABASE_URL",
+  "SUPABASE_SERVICE_ROLE_KEY",
 ];
 
 if (!fs.existsSync(envPath)) {

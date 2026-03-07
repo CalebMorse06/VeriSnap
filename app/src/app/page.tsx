@@ -29,7 +29,34 @@ export default function Home() {
   const [challenges, setChallenges] = useState<Challenge[]>([]);
 
   useEffect(() => {
-    setChallenges(getChallenges().map(toUiChallenge));
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/challenges", { cache: "no-store" });
+        const json = await res.json();
+        if (mounted && res.ok && json.success && Array.isArray(json.challenges)) {
+          const mapped = json.challenges.map((c: any) => ({
+            id: c.id,
+            title: c.title,
+            description: c.description,
+            objective: c.objective,
+            location: { name: c.location_name, lat: c.location_lat, lng: c.location_lng },
+            stakeAmount: c.stake_amount_drops,
+            creatorAddress: c.escrow_owner || c.creator_id,
+            status: c.status as ChallengeStatus,
+            createdAt: new Date(c.created_at),
+            expiresAt: new Date(c.expires_at),
+            xrpTxHash: c.escrow_tx_hash,
+          } as Challenge));
+          setChallenges(mapped);
+          return;
+        }
+      } catch {}
+      if (mounted) setChallenges(getChallenges().map(toUiChallenge));
+    })();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const resetDemo = () => {
