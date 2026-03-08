@@ -174,19 +174,19 @@ export default function ChallengePage() {
           transition={{ delay: 0.05 }}
           className="grid grid-cols-3 gap-3 mb-6"
         >
-          <div className="p-3 rounded-xl bg-white border border-[var(--vs-border)] text-center">
+          <div className="p-4 rounded-2xl bg-white border border-[var(--vs-border)] text-center">
             <Clock className="w-5 h-5 text-amber-500 mx-auto mb-1" />
             <p className="text-lg font-semibold text-[var(--vs-text-primary)]">{challenge.durationMinutes}</p>
             <p className="text-xs text-[var(--vs-text-tertiary)]">minutes</p>
           </div>
-          <div className="p-3 rounded-xl bg-white border border-[var(--vs-border)] text-center">
+          <div className="p-4 rounded-2xl bg-white border border-[var(--vs-border)] text-center">
             <div className="w-5 h-5 rounded-full bg-emerald-500 mx-auto mb-1 flex items-center justify-center">
               <span className="text-white text-xs font-bold">$</span>
             </div>
             <p className="text-lg font-semibold text-[var(--vs-text-primary)]">{xrpAmount}</p>
             <p className="text-xs text-[var(--vs-text-tertiary)]">XRP stake</p>
           </div>
-          <div className="p-3 rounded-xl bg-white border border-[var(--vs-border)] text-center">
+          <div className="p-4 rounded-2xl bg-white border border-[var(--vs-border)] text-center">
             <MapPin className="w-5 h-5 text-[var(--vs-text-tertiary)] mx-auto mb-1" />
             <p className="text-lg font-semibold text-[var(--vs-text-primary)]">1</p>
             <p className="text-xs text-[var(--vs-text-tertiary)]">location</p>
@@ -282,6 +282,12 @@ export default function ChallengePage() {
                   </p>
                 ) : (
                   <div className="mt-0.5">
+                    <img
+                      src="/illustrations/challenge-pending.png"
+                      alt="Waiting for opponent"
+                      className="w-14 h-14 mx-auto mb-1.5 object-contain opacity-80"
+                      draggable={false}
+                    />
                     <p className="text-xs text-amber-600">Waiting...</p>
                     <button
                       onClick={() => {
@@ -326,7 +332,7 @@ export default function ChallengePage() {
             <>
               <Button
                 size="lg"
-                className="w-full h-12 gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+                className="w-full h-12 gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm"
                 onClick={handleSelfStart}
               >
                 <Timer className="w-4 h-4" />
@@ -365,7 +371,7 @@ export default function ChallengePage() {
             <>
               <Button
                 size="lg"
-                className="w-full h-12 gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+                className="w-full h-12 gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm"
                 onClick={() => router.push(`/challenge/${challengeId}/accept`)}
               >
                 Accept Challenge

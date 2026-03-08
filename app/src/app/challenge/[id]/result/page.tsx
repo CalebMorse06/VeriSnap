@@ -3,7 +3,7 @@
 import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { CheckCircle2, XCircle, Home, ChevronLeft, ExternalLink, AlertTriangle, Eye, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Home, ChevronLeft, ExternalLink, AlertTriangle, Eye, ThumbsUp, ThumbsDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TrustPillars } from "@/components/ui/trust-badge";
 import { ShareOptions } from "@/components/challenge/ShareOptions";
@@ -154,25 +154,28 @@ export default function ResultPage() {
           className="text-center mb-6"
         >
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: "spring", delay: 0.2 }}
-            className={`w-[72px] h-[72px] rounded-full mx-auto flex items-center justify-center mb-4 ${
-              passed ? "bg-green-500" : "bg-red-500"
-            }`}
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", delay: 0.2, stiffness: 300, damping: 20 }}
+            className="relative mx-auto mb-6 w-[160px] h-[160px]"
           >
-            {passed ? (
-              <CheckCircle2 className="w-9 h-9 text-white" />
-            ) : (
-              <XCircle className="w-9 h-9 text-white" />
-            )}
+            {passed && <div className="absolute inset-0 bg-green-100/60 blur-3xl rounded-full" />}
+            <img
+              src={passed ? "/illustrations/challenge-passed.png" : "/illustrations/challenge-failed.png"}
+              alt={passed ? "Challenge Passed" : "Challenge Failed"}
+              className="relative w-full h-full object-contain"
+              draggable={false}
+            />
           </motion.div>
 
-          <h2 className={`text-2xl font-semibold tracking-tight ${passed ? "text-green-700" : "text-red-700"}`}>
+          <h2 className={`text-3xl font-bold tracking-tight ${passed ? "text-green-700" : "text-red-700"}`}>
             {passed ? "Challenge Passed" : "Challenge Failed"}
           </h2>
           <p className="text-[var(--vs-text-secondary)] text-sm mt-1">
             {confidence}% confidence
+          </p>
+          <p className="text-[var(--vs-text-tertiary)] text-xs mt-1">
+            {passed ? "Your stake has been released" : "Better luck next time"}
           </p>
         </motion.div>
 

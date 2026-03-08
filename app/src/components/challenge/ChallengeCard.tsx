@@ -35,15 +35,15 @@ export function ChallengeCard({ challenge, onAccept, onView }: ChallengeCardProp
     <motion.div
       whileHover={{ y: -2 }}
       whileTap={{ scale: 0.995 }}
-      className="bg-white rounded-xl border border-[var(--vs-border)] overflow-hidden transition-shadow hover:shadow-md"
+      className="bg-white rounded-2xl border border-[var(--vs-border)] overflow-hidden transition-shadow hover:shadow-lg"
     >
-      <div className="p-4">
+      <div className="p-5">
         {/* Top row - title + badge */}
         <div className="flex items-center gap-2 mb-2">
-          <h3 className="text-base font-semibold text-[var(--vs-text-primary)] leading-tight flex-1 min-w-0 truncate">
+          <h3 className="text-base font-semibold text-[var(--vs-text-primary)] leading-tight flex-1 min-w-0 truncate tracking-tight">
             {challenge.title}
           </h3>
-          <span className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${status.bg} ${status.text}`}>
+          <span className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap tracking-wide ${status.bg} ${status.text}`}>
             {status.label}
           </span>
         </div>
@@ -82,7 +82,7 @@ export function ChallengeCard({ challenge, onAccept, onView }: ChallengeCardProp
               e.stopPropagation();
               onAccept();
             }}
-            className="w-full py-2.5 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors"
+            className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
           >
             Accept Challenge
             <ArrowRight className="w-4 h-4" />
@@ -95,7 +95,7 @@ export function ChallengeCard({ challenge, onAccept, onView }: ChallengeCardProp
               e.stopPropagation();
               onView();
             }}
-            className="w-full py-2.5 px-4 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 text-sm font-medium flex items-center justify-center gap-2 border border-amber-200 transition-colors"
+            className="w-full py-3 px-4 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 text-sm font-semibold flex items-center justify-center gap-2 border border-amber-200 transition-colors"
           >
             Continue
             <ChevronRight className="w-4 h-4" />
@@ -108,7 +108,7 @@ export function ChallengeCard({ challenge, onAccept, onView }: ChallengeCardProp
               e.stopPropagation();
               onView();
             }}
-            className="w-full py-2.5 px-4 rounded-lg bg-zinc-50 hover:bg-zinc-100 text-[var(--vs-text-secondary)] text-sm font-medium flex items-center justify-center gap-2 border border-[var(--vs-border)] transition-colors"
+            className="w-full py-3 px-4 rounded-xl bg-zinc-50 hover:bg-zinc-100 text-[var(--vs-text-secondary)] text-sm font-semibold flex items-center justify-center gap-2 border border-[var(--vs-border)] transition-colors"
           >
             View Result
             <ChevronRight className="w-4 h-4" />

@@ -145,7 +145,7 @@ function FeedCard({ item }: { item: FeedItem }) {
     : null;
 
   return (
-    <div className="bg-white rounded-xl border border-[var(--vs-border)] overflow-hidden">
+    <div className="bg-white rounded-2xl border border-[var(--vs-border)] overflow-hidden hover:shadow-lg transition-shadow">
       {/* Proof image */}
       {proofUrl && (
         <div className="relative aspect-video bg-zinc-100">
@@ -177,9 +177,9 @@ function FeedCard({ item }: { item: FeedItem }) {
       )}
 
       {/* Content */}
-      <div className="p-4">
+      <div className="p-5">
         <div className="flex items-start justify-between gap-3 mb-2">
-          <h3 className="font-medium text-[var(--vs-text-primary)]">{item.title}</h3>
+          <h3 className="font-semibold tracking-tight text-[var(--vs-text-primary)]">{item.title}</h3>
           <span className="text-base font-semibold text-emerald-600 whitespace-nowrap">
             {item.stakeXrp} XRP
           </span>

@@ -185,7 +185,7 @@ export default function AcceptChallengePage() {
           )}
 
           {/* Challenge details */}
-          <section className="mb-6 p-5 rounded-xl bg-white border border-[var(--vs-border)]">
+          <section className="mb-6 p-6 rounded-2xl bg-white border border-[var(--vs-border)]">
             <h2 className="text-lg font-semibold text-[var(--vs-text-primary)] mb-1">{challenge.title}</h2>
             <p className="text-sm text-[var(--vs-text-secondary)] mb-4">{challenge.description}</p>
 
@@ -258,7 +258,7 @@ export default function AcceptChallengePage() {
           {/* Accept button */}
           <Button
             size="lg"
-            className="w-full h-12 gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+            className="w-full h-12 gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm"
             onClick={handleAccept}
           >
             <CheckCircle2 className="w-5 h-5" />

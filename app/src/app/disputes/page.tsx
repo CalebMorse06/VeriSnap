@@ -169,7 +169,7 @@ export default function DisputesPage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className="bg-white rounded-xl border border-[var(--vs-border)] overflow-hidden"
+                className="bg-white rounded-2xl border border-[var(--vs-border)] overflow-hidden hover:shadow-lg transition-shadow"
               >
                 {/* Proof image */}
                 {d.proof_cid && (
@@ -186,7 +186,7 @@ export default function DisputesPage() {
                   </div>
                 )}
 
-                <div className="p-4 space-y-3">
+                <div className="p-5 space-y-3">
                   {/* Resolution banner */}
                   {d.status !== "open" && (
                     <div className={`p-3 rounded-lg ${

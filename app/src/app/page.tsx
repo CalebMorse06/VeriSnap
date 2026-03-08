@@ -120,7 +120,7 @@ export default function Home() {
 
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="max-w-5xl mx-auto px-6 pt-16 pb-20 sm:pt-24 sm:pb-28">
+        <div className="max-w-5xl mx-auto px-6 pt-20 pb-24 sm:pt-32 sm:pb-36">
           <div className="grid sm:grid-cols-2 gap-12 items-center">
             {/* Left — copy */}
             <div>
@@ -128,7 +128,7 @@ export default function Home() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
-                className="text-4xl sm:text-5xl font-bold text-zinc-900 leading-[1.1] tracking-tight"
+                className="text-5xl sm:text-6xl font-bold text-zinc-900 leading-[1.05] tracking-[-0.03em]"
               >
                 Prove it,<br />
                 earn it.
@@ -137,7 +137,7 @@ export default function Home() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.1 }}
-                className="mt-5 text-lg text-zinc-500 leading-relaxed max-w-md"
+                className="mt-6 text-lg sm:text-xl text-zinc-500 leading-relaxed max-w-md"
               >
                 Stake XRP on real-world challenges. Submit photo proof. AI verifies. Settle on-chain — no accounts, no trust required.
               </motion.p>
@@ -148,13 +148,13 @@ export default function Home() {
                 className="mt-8 flex items-center gap-3"
               >
                 <Link href="/challenge/create">
-                  <Button size="lg" className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full font-medium px-6 h-12 text-base">
+                  <Button size="lg" className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full font-medium px-8 h-13 text-base shadow-lg shadow-emerald-600/20">
                     Create a Challenge
                     <ArrowRight className="w-4 h-4" />
                   </Button>
                 </Link>
                 <Link href="/feed">
-                  <Button size="lg" variant="ghost" className="text-zinc-600 hover:text-zinc-900 rounded-full h-12 text-base">
+                  <Button size="lg" variant="ghost" className="text-zinc-600 hover:text-zinc-900 rounded-full h-12 text-base border border-zinc-200">
                     Browse Feed
                   </Button>
                 </Link>
@@ -217,9 +217,9 @@ export default function Home() {
 
       {/* How it works */}
       <section className="border-t border-zinc-100 bg-zinc-50/50">
-        <div className="max-w-5xl mx-auto px-6 py-20">
+        <div className="max-w-5xl mx-auto px-6 py-24">
           <div className="text-center mb-14">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 tracking-tight">How it works</h2>
+            <h2 className="text-3xl sm:text-4xl font-bold text-zinc-900 tracking-[-0.02em]">How it works</h2>
             <p className="mt-3 text-zinc-500 max-w-lg mx-auto">Four steps. No sign-up. No passwords. Just your wallet and a camera.</p>
           </div>
 
@@ -262,8 +262,8 @@ export default function Home() {
                 transition={{ delay: i * 0.1 }}
                 className="text-center"
               >
-                <div className={`w-12 h-12 rounded-2xl ${item.color} flex items-center justify-center mx-auto mb-4`}>
-                  <item.icon className="w-5 h-5" />
+                <div className={`w-14 h-14 rounded-2xl ${item.color} flex items-center justify-center mx-auto mb-4`}>
+                  <item.icon className="w-6 h-6" />
                 </div>
                 <p className="text-[11px] font-bold text-zinc-400 tracking-widest uppercase mb-2">{item.step}</p>
                 <h3 className="text-lg font-semibold text-zinc-900 mb-1">{item.title}</h3>
@@ -276,9 +276,9 @@ export default function Home() {
 
       {/* Tech stack — visible and proud */}
       <section className="border-t border-zinc-100">
-        <div className="max-w-5xl mx-auto px-6 py-20">
+        <div className="max-w-5xl mx-auto px-6 py-24">
           <div className="text-center mb-14">
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 tracking-tight">Built on real infrastructure</h2>
+            <h2 className="text-3xl sm:text-4xl font-bold text-zinc-900 tracking-[-0.02em]">Built on real infrastructure</h2>
             <p className="mt-3 text-zinc-500 max-w-lg mx-auto">Every challenge is backed by verifiable, on-chain technology — not promises.</p>
           </div>
 
@@ -312,7 +312,7 @@ export default function Home() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className="bg-white rounded-2xl border border-zinc-200 p-6 hover:border-zinc-300 transition-colors"
+                className="bg-white rounded-2xl border border-zinc-200 p-7 hover:border-zinc-300 hover:shadow-lg transition-all"
               >
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center">
@@ -334,10 +334,10 @@ export default function Home() {
 
       {/* Photo placeholder section */}
       <section className="border-t border-zinc-100 bg-zinc-50/50">
-        <div className="max-w-5xl mx-auto px-6 py-20">
+        <div className="max-w-5xl mx-auto px-6 py-24">
           <div className="grid sm:grid-cols-2 gap-12 items-center">
             <div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 tracking-tight leading-tight">
+              <h2 className="text-3xl sm:text-4xl font-bold text-zinc-900 tracking-[-0.02em] leading-tight">
                 Your challenge,<br />your proof.
               </h2>
               <p className="mt-4 text-zinc-500 leading-relaxed">
@@ -451,7 +451,7 @@ export default function Home() {
                     key={challenge.id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.03 }}
+                    transition={{ delay: index * 0.05 }}
                   >
                     <ChallengeCard
                       challenge={challenge}
@@ -469,7 +469,7 @@ export default function Home() {
       {/* CTA */}
       <section className="border-t border-zinc-100 bg-zinc-900">
         <div className="max-w-5xl mx-auto px-6 py-20 text-center">
-          <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Ready to put skin in the game?</h2>
+          <h2 className="text-3xl sm:text-4xl font-bold text-white tracking-[-0.02em]">Ready to put skin in the game?</h2>
           <p className="mt-3 text-zinc-400 max-w-md mx-auto">Create a challenge, stake real XRP, and prove you can follow through.</p>
           <Link href="/challenge/create">
             <Button size="lg" className="mt-8 gap-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full font-medium px-8 h-12 text-base">

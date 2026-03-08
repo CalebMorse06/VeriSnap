@@ -267,7 +267,7 @@ export default function VerifyPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`mt-6 p-5 rounded-xl text-center ${
+            className={`mt-6 p-6 rounded-2xl text-center ${
               result.passed
                 ? "bg-green-50 border border-green-200"
                 : "bg-red-50 border border-red-200"

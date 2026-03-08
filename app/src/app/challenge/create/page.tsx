@@ -235,7 +235,7 @@ export default function CreateChallengePage() {
       <main className="max-w-xl mx-auto px-4 py-6">
         {/* Challenge mode toggle */}
         <section className="mb-6">
-          <h2 className="text-sm font-medium text-[var(--vs-text-secondary)] uppercase tracking-wide mb-3">
+          <h2 className="text-sm font-medium text-[var(--vs-text-secondary)] uppercase tracking-wider mb-3">
             Challenge Type
           </h2>
           <div className="grid grid-cols-2 gap-2">
@@ -277,7 +277,7 @@ export default function CreateChallengePage() {
 
         {/* Presets */}
         <section className="mb-6">
-          <h2 className="text-sm font-medium text-[var(--vs-text-secondary)] uppercase tracking-wide mb-3">
+          <h2 className="text-sm font-medium text-[var(--vs-text-secondary)] uppercase tracking-wider mb-3">
             Quick Start
           </h2>
           <div className="space-y-2">
@@ -290,7 +290,7 @@ export default function CreateChallengePage() {
                   setSelectedPreset(p.id);
                   setIsCustom(false);
                 }}
-                className={`w-full p-4 rounded-xl text-left transition-all border ${
+                className={`w-full p-5 rounded-2xl text-left transition-all border ${
                   selectedPreset === p.id && !isCustom
                     ? "bg-emerald-50 border-emerald-200"
                     : "bg-white border-[var(--vs-border)] hover:border-zinc-300"
@@ -352,7 +352,7 @@ export default function CreateChallengePage() {
                   placeholder="e.g., Run a mile"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="rounded-lg border-[var(--vs-border)] flex-1"
+                  className="rounded-xl border-[var(--vs-border)] flex-1"
                 />
                 <Button
                   variant="outline"
@@ -406,7 +406,7 @@ export default function CreateChallengePage() {
                   placeholder="What is this challenge about?"
                   value={description}
                   onChange={(e) => { setDescription(e.target.value); clearAiTag("description"); }}
-                  className="rounded-lg border-[var(--vs-border)]"
+                  className="rounded-xl border-[var(--vs-border)]"
                 />
               )}
             </div>
@@ -424,7 +424,7 @@ export default function CreateChallengePage() {
                   placeholder="What should the photo show?"
                   value={objective}
                   onChange={(e) => { setObjective(e.target.value); clearAiTag("objective"); }}
-                  className="rounded-lg border-[var(--vs-border)]"
+                  className="rounded-xl border-[var(--vs-border)]"
                 />
               )}
             </div>
@@ -454,7 +454,7 @@ export default function CreateChallengePage() {
                     max={1000}
                     value={stakeAmount}
                     onChange={(e) => { setStakeAmount(parseInt(e.target.value) || 10); clearAiTag("stake"); }}
-                    className="rounded-lg border-[var(--vs-border)]"
+                    className="rounded-xl border-[var(--vs-border)]"
                   />
                 )}
               </div>
@@ -474,7 +474,7 @@ export default function CreateChallengePage() {
                     max={120}
                     value={duration}
                     onChange={(e) => { setDuration(parseInt(e.target.value) || 20); clearAiTag("duration"); }}
-                    className="rounded-lg border-[var(--vs-border)]"
+                    className="rounded-xl border-[var(--vs-border)]"
                   />
                 )}
               </div>
@@ -547,7 +547,7 @@ export default function CreateChallengePage() {
             <>
               <Button
                 size="lg"
-                className="w-full h-12 gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+                className="w-full h-12 gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm shadow-emerald-600/15"
                 onClick={handleCreate}
                 disabled={!preset && !isCustom}
               >

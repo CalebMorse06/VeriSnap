@@ -140,6 +140,18 @@ button:disabled {
   font-variant-numeric: tabular-nums;
 }
 
+/* Elevated card surface */
+.vs-card {
+  background: #ffffff;
+  border: 1px solid var(--vs-border);
+  border-radius: 16px;
+  transition: box-shadow 200ms ease, border-color 200ms ease;
+}
+.vs-card:hover {
+  box-shadow: 0 12px 24px -4px rgb(0 0 0 / 0.06), 0 4px 8px -4px rgb(0 0 0 / 0.04);
+  border-color: var(--vs-border-hover);
+}
+
 /* Prevent iOS zoom on input focus */
 @supports (-webkit-touch-callout: none) {
   input[type="text"],

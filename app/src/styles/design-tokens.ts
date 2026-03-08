@@ -84,6 +84,7 @@ export const spacing = {
   xl: "24px",
   "2xl": "32px",
   "3xl": "48px",
+  "4xl": "64px",
 } as const;
 
 export const radius = {
@@ -98,7 +99,7 @@ export const shadows = {
   sm: "0 1px 2px 0 rgb(0 0 0 / 0.03)",
   md: "0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05)",
   lg: "0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05)",
-  xl: "0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05)",
+  xl: "0 12px 24px -4px rgb(0 0 0 / 0.06), 0 4px 8px -4px rgb(0 0 0 / 0.04)",
 } as const;
 
 export const fontSizes = {
@@ -111,6 +112,8 @@ export const fontSizes = {
   "2xl": "20px",
   "3xl": "24px",
   "4xl": "28px",
+  "5xl": "36px",
+  "6xl": "48px",
 } as const;
 
 export const lineHeights = {
@@ -124,6 +127,13 @@ export const fontWeights = {
   medium: "500",
   semibold: "600",
   bold: "700",
+} as const;
+
+export const letterSpacing = {
+  tighter: "-0.03em",
+  tight: "-0.02em",
+  normal: "0em",
+  wide: "0.05em",
 } as const;
 
 export const animation = {
