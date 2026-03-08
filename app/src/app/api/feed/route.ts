@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     );
   }
 
-  // Only fetch resolved PUBLIC challenges with revealed proof
+  // Fetch resolved challenges with proof (show all for demo, not just public)
   const { data, error } = await supabase
     .from("challenges")
     .select(`
@@ -26,12 +26,11 @@ export async function GET(request: Request) {
       status, visibility, resolved_at,
       proof_cid, proof_revealed,
       verification_passed, verification_confidence,
-      settlement_tx
+      settlement_tx, proof_media_type
     `)
-    .eq("visibility", "public")
-    .eq("proof_revealed", true)
+    .not("proof_cid", "is", null)
     .in("status", ["PASSED", "FAILED", "SETTLED"])
-    .order("resolved_at", { ascending: false })
+    .order("resolved_at", { ascending: false, nullsFirst: false })
     .range(offset, offset + limit - 1);
 
   if (error) {
@@ -54,7 +53,7 @@ export async function GET(request: Request) {
     passed: c.verification_passed,
     confidence: c.verification_confidence,
     proofCid: c.proof_cid,
-    proofMediaType: (c as Record<string, unknown>).proof_media_type || "image",
+    proofMediaType: c.proof_media_type || "image",
     settlementTx: c.settlement_tx,
     resolvedAt: c.resolved_at,
   }));
