@@ -10,7 +10,7 @@ interface ProofCardProps {
   gateway?: string;
 }
 
-export function ProofCard({ cid, imageUrl, status, gateway = "gateway.pinata.cloud" }: ProofCardProps) {
+export function ProofCard({ cid, imageUrl, status, gateway = "peach-random-penguin-753.mypinata.cloud" }: ProofCardProps) {
   const ipfsUrl = `https://${gateway}/ipfs/${cid}`;
   const displayCid = `${cid.slice(0, 12)}...${cid.slice(-8)}`;
 

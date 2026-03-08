@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     let reverifyResult = null;
     try {
       // Fetch the proof image from Pinata
-      const proofUrl = `https://gateway.pinata.cloud/ipfs/${challenge.proof_cid}`;
+      const proofUrl = `https://peach-random-penguin-753.mypinata.cloud/ipfs/${challenge.proof_cid}`;
       const imgRes = await fetch(proofUrl);
       if (imgRes.ok) {
         const buffer = await imgRes.arrayBuffer();

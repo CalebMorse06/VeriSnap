@@ -141,8 +141,8 @@ export default function FeedPage() {
 }
 
 function FeedCard({ item }: { item: FeedItem }) {
-  const proofUrl = item.proofCid 
-    ? `https://gateway.pinata.cloud/ipfs/${item.proofCid}`
+  const proofUrl = item.proofCid
+    ? `https://peach-random-penguin-753.mypinata.cloud/ipfs/${item.proofCid}`
     : null;
 
   return (

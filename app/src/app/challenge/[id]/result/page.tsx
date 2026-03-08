@@ -335,7 +335,7 @@ export default function ResultPage() {
               <div className="flex items-center justify-between py-2 border-t border-[var(--vs-border-subtle)]">
                 <span className="text-[var(--vs-text-tertiary)]">Proof CID</span>
                 <a
-                  href={`https://gateway.pinata.cloud/ipfs/${proofCid}`}
+                  href={`https://peach-random-penguin-753.mypinata.cloud/ipfs/${proofCid}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-50 border border-zinc-200 text-zinc-700 hover:bg-zinc-100 font-mono transition-colors"
@@ -413,7 +413,7 @@ export default function ResultPage() {
                 <p className="text-xs font-medium text-[var(--vs-text-primary)]">Proof Stored (IPFS)</p>
                 {proofCid ? (
                   <a
-                    href={`https://gateway.pinata.cloud/ipfs/${proofCid}`}
+                    href={`https://peach-random-penguin-753.mypinata.cloud/ipfs/${proofCid}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-[11px] font-mono text-emerald-600 hover:text-emerald-700 flex items-center gap-1"

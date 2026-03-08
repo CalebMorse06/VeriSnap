@@ -176,7 +176,7 @@ export default function DisputesPage() {
                   <div className="aspect-video bg-zinc-100 relative">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={`https://gateway.pinata.cloud/ipfs/${d.proof_cid}`}
+                      src={`https://peach-random-penguin-753.mypinata.cloud/ipfs/${d.proof_cid}`}
                       alt="Disputed proof"
                       className="w-full h-full object-cover"
                     />

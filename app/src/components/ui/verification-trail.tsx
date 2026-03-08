@@ -20,7 +20,7 @@ export function VerificationTrail({
   escrowTxHash,
   settlementTxHash,
   verification,
-  gateway = "gateway.pinata.cloud",
+  gateway = "peach-random-penguin-753.mypinata.cloud",
 }: VerificationTrailProps) {
   const steps = [
     {
