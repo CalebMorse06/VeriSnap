@@ -7,15 +7,6 @@ import { verifySchema } from "@/lib/schemas";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { validateProofServer } from "@/lib/proof-validation";
 
-// Allow large video uploads (default is 4MB)
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: "50mb",
-    },
-  },
-};
-
 interface VerifyRequest {
   challengeId: string;
   imageData: string; // base64
