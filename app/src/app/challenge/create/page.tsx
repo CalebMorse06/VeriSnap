@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ChevronLeft, MapPin, Clock, Lock, ArrowRight, RotateCcw, ExternalLink, User, Users, Globe, Wand2, Shield, Sparkles, Copy, Check } from "lucide-react";
+import { ChevronLeft, MapPin, Clock, Lock, ArrowRight, RotateCcw, ExternalLink, User, Users, Globe, Wand2, Shield, Sparkles, Copy, Check, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TrustBadge, TrustPillars } from "@/components/ui/trust-badge";
@@ -14,6 +14,8 @@ import { ServiceStatus } from "@/components/status/ServiceStatus";
 import Link from "next/link";
 import { createChallenge, updateChallenge } from "@/lib/store/challenges";
 import { useWallet } from "@/lib/wallet-context";
+import { WalletButton } from "@/components/wallet/WalletButton";
+import { QRCodeSVG } from "qrcode.react";
 
 // Preset challenges for quick demo
 const PRESETS = [
@@ -96,7 +98,7 @@ export default function CreateChallengePage() {
         location: { name: locationName || "Specified location", lat: 0, lng: 0 },
         stakeAmount: stakeAmount * 1_000_000,
         durationMinutes: duration,
-        creatorAddress: wallet.address || "rDemoUser",
+        creatorAddress: wallet.address || "",
         challengeMode,
         ...(challengeMode === "versus" && opponentAddress ? { opponentAddress } : {}),
       } : {
@@ -106,7 +108,7 @@ export default function CreateChallengePage() {
         location: preset!.location,
         stakeAmount: preset!.stakeAmount * 1_000_000,
         durationMinutes: preset!.durationMinutes,
-        creatorAddress: wallet.address || "rDemoUser",
+        creatorAddress: wallet.address || "",
         challengeMode,
         ...(challengeMode === "versus" && opponentAddress ? { opponentAddress } : {}),
       };
@@ -466,7 +468,13 @@ export default function CreateChallengePage() {
                     min={1}
                     max={1000}
                     value={stakeAmount}
-                    onChange={(e) => { setStakeAmount(parseInt(e.target.value) || 10); clearAiTag("stake"); }}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === "") { setStakeAmount(0); }
+                      else { setStakeAmount(parseInt(val) || 0); }
+                      clearAiTag("stake");
+                    }}
+                    onBlur={() => { if (stakeAmount < 1) setStakeAmount(1); }}
                     className="rounded-xl border-[var(--vs-border)]"
                   />
                 )}
@@ -558,23 +566,38 @@ export default function CreateChallengePage() {
         <section>
           {creationStep === "idle" && (
             <>
-              {wallet.address && (
-                <p className="text-center text-xs text-[var(--vs-text-tertiary)] mb-3">
-                  Creating as <span className="font-mono text-[var(--vs-text-secondary)]">{wallet.address.slice(0, 6)}...{wallet.address.slice(-4)}</span>
-                </p>
+              {wallet.address ? (
+                <>
+                  <p className="text-center text-xs text-[var(--vs-text-tertiary)] mb-3">
+                    Creating as <span className="font-mono text-[var(--vs-text-secondary)]">{wallet.address.slice(0, 6)}...{wallet.address.slice(-4)}</span>
+                  </p>
+                  <Button
+                    size="lg"
+                    className="w-full h-12 gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm shadow-emerald-600/15"
+                    onClick={handleCreate}
+                    disabled={!preset && !isCustom}
+                  >
+                    Create {challengeMode === "bounty" ? "Bounty" : "Challenge"}
+                    <ArrowRight className="w-4 h-4" />
+                  </Button>
+                  <p className="text-center text-xs text-[var(--vs-text-tertiary)] mt-3">
+                    Stake will be locked until challenge resolves
+                  </p>
+                </>
+              ) : (
+                <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200 text-center space-y-3">
+                  <div className="flex items-center justify-center gap-2 text-zinc-600">
+                    <Wallet className="w-5 h-5" />
+                    <p className="font-medium text-sm">Connect wallet to create</p>
+                  </div>
+                  <p className="text-xs text-[var(--vs-text-tertiary)]">
+                    A wallet address is required to lock your stake on XRPL
+                  </p>
+                  <div className="flex justify-center">
+                    <WalletButton />
+                  </div>
+                </div>
               )}
-              <Button
-                size="lg"
-                className="w-full h-12 gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm shadow-emerald-600/15"
-                onClick={handleCreate}
-                disabled={!preset && !isCustom}
-              >
-                Create {challengeMode === "bounty" ? "Bounty" : "Challenge"}
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-              <p className="text-center text-xs text-[var(--vs-text-tertiary)] mt-3">
-                Stake will be locked until challenge resolves
-              </p>
             </>
           )}
 
@@ -587,7 +610,7 @@ export default function CreateChallengePage() {
               <MoneyFlowVisualization
                 flowState={creationStep === "confirming" ? "locked" : "funding"}
                 amountXrp={xrpAmount}
-                creatorAddress={wallet.address || "rDemoUser"}
+                creatorAddress={wallet.address || "Your Wallet"}
                 compact
               />
               <EscrowCreationPipeline currentStep={creationStep} />
@@ -636,15 +659,31 @@ export default function CreateChallengePage() {
                 </div>
               </div>
               {(challengeMode === "versus" || challengeMode === "bounty") && (
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="w-full h-12 gap-2 rounded-lg border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-                  onClick={() => handleCopyLink(escrowResult.challengeId)}
-                >
-                  {linkCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  {linkCopied ? "Copied!" : "Copy Challenge Link"}
-                </Button>
+                <>
+                  <div className="flex flex-col items-center p-4 rounded-xl bg-white border border-[var(--vs-border)]">
+                    <QRCodeSVG
+                      value={typeof window !== "undefined"
+                        ? `${window.location.origin}/challenge/${escrowResult.challengeId}/accept`
+                        : `/challenge/${escrowResult.challengeId}/accept`}
+                      size={160}
+                      level="M"
+                      includeMargin={false}
+                    />
+                    <p className="text-sm font-medium text-[var(--vs-text-primary)] mt-3">Scan to accept</p>
+                    <p className="text-xs text-[var(--vs-text-tertiary)] mt-1">
+                      {challengeMode === "bounty" ? "Anyone can scan to attempt" : "Share with your opponent"}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="w-full h-12 gap-2 rounded-lg border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                    onClick={() => handleCopyLink(escrowResult.challengeId)}
+                  >
+                    {linkCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    {linkCopied ? "Copied!" : "Copy Challenge Link"}
+                  </Button>
+                </>
               )}
               <Button
                 size="lg"

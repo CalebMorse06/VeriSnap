@@ -28,7 +28,8 @@ create table if not exists challenges (
   verification_reasoning text,
   challenge_mode text default 'self',        -- self | versus
   opponent_address text,                      -- target friend wallet (versus)
-  acceptor_address text                       -- who accepted the challenge
+  acceptor_address text,                      -- who accepted the challenge
+  proof_media_type text default 'image'       -- image | video
 );
 
 create index if not exists challenges_status_idx on challenges(status);
@@ -79,3 +80,4 @@ create index if not exists disputes_challenge_id_idx on disputes(challenge_id);
 -- ALTER TABLE challenges ADD COLUMN IF NOT EXISTS challenge_mode text DEFAULT 'self';
 -- ALTER TABLE challenges ADD COLUMN IF NOT EXISTS opponent_address text;
 -- ALTER TABLE challenges ADD COLUMN IF NOT EXISTS acceptor_address text;
+-- ALTER TABLE challenges ADD COLUMN IF NOT EXISTS proof_media_type text DEFAULT 'image';

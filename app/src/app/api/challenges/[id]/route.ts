@@ -74,6 +74,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (body.resolvedAt !== undefined) updates.resolved_at = new Date(body.resolvedAt).toISOString();
   if (body.visibility !== undefined) updates.visibility = body.visibility;
   if (body.proofRevealed !== undefined) updates.proof_revealed = Boolean(body.proofRevealed);
+  // proof_media_type: only set if column exists (run migration: ALTER TABLE challenges ADD COLUMN IF NOT EXISTS proof_media_type text DEFAULT 'image')
+  if (body.proofMediaType !== undefined) updates.proof_media_type = body.proofMediaType;
   if (body.acceptorAddress !== undefined) updates.acceptor_address = body.acceptorAddress;
   if (body.opponentAddress !== undefined) updates.opponent_address = body.opponentAddress;
   if (body.challengeMode !== undefined) updates.challenge_mode = body.challengeMode;

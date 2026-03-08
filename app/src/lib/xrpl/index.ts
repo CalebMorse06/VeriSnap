@@ -173,4 +173,67 @@ export async function createTestWallet(): Promise<{ address: string; seed: strin
   return { address: wallet.address, seed: wallet.seed! };
 }
 
+/**
+ * Mint an NFT on XRPL as proof-of-completion trophy.
+ * Uses the app wallet as issuer, with challenge metadata in the URI.
+ */
+export async function mintNFT(
+  appWallet: Wallet,
+  challengeId: string,
+  proofCid?: string,
+  challengeTitle?: string
+): Promise<{ txHash: string; nftTokenId: string }> {
+  const xrplClient = await getClient();
+
+  // Build a simple metadata URI pointing to the proof on IPFS
+  const metadataUri = proofCid
+    ? `ipfs://${proofCid}`
+    : `verisnap://${challengeId}`;
+
+  const mintTx = {
+    TransactionType: "NFTokenMint" as const,
+    Account: appWallet.address,
+    URI: Buffer.from(metadataUri, "utf8").toString("hex").toUpperCase(),
+    Flags: 8, // tfTransferable
+    NFTokenTaxon: 0,
+    Memos: [{
+      Memo: {
+        MemoType: Buffer.from("verisnap/nft", "utf8").toString("hex").toUpperCase(),
+        MemoData: Buffer.from(JSON.stringify({
+          challenge: challengeId,
+          title: challengeTitle || "VeriSnap Challenge",
+          proof: proofCid || "",
+        }), "utf8").toString("hex").toUpperCase(),
+      },
+    }],
+  };
+
+  const prepared = await xrplClient.autofill(mintTx);
+  const signed = appWallet.sign(prepared);
+  const result = await xrplClient.submitAndWait(signed.tx_blob);
+
+  // Extract NFTokenID from metadata
+  const meta = result.result.meta as unknown as Record<string, unknown>;
+  let nftTokenId = "";
+  if (meta && typeof meta === "object" && "nfts_minted" in meta) {
+    // Fallback: extract from affected nodes
+  }
+  // Parse from AffectedNodes
+  const affectedNodes = (meta as any)?.AffectedNodes || [];
+  for (const node of affectedNodes) {
+    const created = node.CreatedNode || node.ModifiedNode;
+    if (created?.LedgerEntryType === "NFTokenPage") {
+      const tokens = created.NewFields?.NFTokens || created.FinalFields?.NFTokens || [];
+      if (tokens.length > 0) {
+        nftTokenId = tokens[tokens.length - 1].NFToken?.NFTokenID || "";
+      }
+    }
+  }
+
+  return {
+    txHash: result.result.hash,
+    nftTokenId,
+  };
+}
+
 export { Wallet, xrpToDrops, dropsToXrp };

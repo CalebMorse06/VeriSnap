@@ -18,7 +18,8 @@ export interface VerificationResult {
 export async function verifyProof(
   imageData: string, // base64
   challengeObjective: string,
-  challengeContext?: string
+  challengeContext?: string,
+  mediaType: "image" | "video" = "image"
 ): Promise<VerificationResult> {
   const model = genAI.getGenerativeModel({ 
     model: "gemini-2.0-flash",
@@ -27,7 +28,9 @@ export async function verifyProof(
     },
   });
 
-  const prompt = `You are a verification AI for VeriSnap, a challenge app where users stake XRP on completing objectives and submit photo proof.
+  const isVideo = mediaType === "video";
+
+  const prompt = `You are a verification AI for VeriSnap, a challenge app where users stake XRP on completing objectives and submit ${isVideo ? "video" : "photo"} proof.
 
 ## CHALLENGE OBJECTIVE
 ${challengeObjective}
@@ -35,7 +38,9 @@ ${challengeObjective}
 ${challengeContext ? `## ADDITIONAL CONTEXT\n${challengeContext}\n` : ""}
 
 ## YOUR TASK
-Analyze the submitted photo and determine if the user has reasonably completed the challenge objective.
+Analyze the submitted ${isVideo ? "video" : "photo"} and determine if the user has reasonably completed the challenge objective.${isVideo ? `
+For video proof, assess the actions performed over time — look for the activity being completed, not just a single frame.
+If the objective involves counting repetitions (e.g., pushups, squats, jumps), COUNT the number of reps you observe and include the count in your reasoning (e.g., "I counted approximately 8 pushups").` : ""}
 
 You are verifying for a fun challenge app, not a court of law. If the user appears to be genuinely attempting the challenge, lean toward passing.
 
@@ -55,14 +60,15 @@ You MUST also describe what you see in the photo in 1-2 sentences. Be specific a
 Respond with JSON: {"passed": boolean, "confidence": number, "reasoning": string, "sceneDescription": string, "fraudIndicators": string[], "objectiveMatches": string[]}`;
 
   // Convert base64 to inline data
-  const base64Data = imageData.replace(/^data:image\/\w+;base64,/, "");
-  
+  const base64Data = imageData.replace(/^data:(image|video)\/[\w.+-]+;base64,/, "");
+  const mimeType = isVideo ? "video/webm" : "image/jpeg";
+
   try {
     const result = await model.generateContent([
       prompt,
       {
         inlineData: {
-          mimeType: "image/jpeg",
+          mimeType,
           data: base64Data,
         },
       },
@@ -87,7 +93,7 @@ Respond with JSON: {"passed": boolean, "confidence": number, "reasoning": string
       const fallbackModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
       const result = await fallbackModel.generateContent([
         prompt + "\n\nRespond with JSON: {passed: boolean, confidence: number, reasoning: string}",
-        { inlineData: { mimeType: "image/jpeg", data: base64Data } },
+        { inlineData: { mimeType, data: base64Data } },
       ]);
       const text = result.response.text();
       const jsonMatch = text.match(/\{[\s\S]*\}/);

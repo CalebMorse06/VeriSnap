@@ -54,6 +54,7 @@ export async function GET(request: Request) {
     passed: c.verification_passed,
     confidence: c.verification_confidence,
     proofCid: c.proof_cid,
+    proofMediaType: (c as Record<string, unknown>).proof_media_type || "image",
     settlementTx: c.settlement_tx,
     resolvedAt: c.resolved_at,
   }));

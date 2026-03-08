@@ -64,7 +64,7 @@ export function WalletButton() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-72 bg-zinc-900 border border-zinc-700 rounded-xl shadow-xl z-50 p-3 space-y-3">
+        <div className="absolute right-0 top-full mt-2 w-72 bg-zinc-900 border border-zinc-700 rounded-xl shadow-xl z-[100] p-3 space-y-3">
           {isConnected ? (
             <>
               <div>

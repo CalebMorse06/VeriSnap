@@ -32,6 +32,7 @@ export default function VerifyPage() {
   const challengeId = params.id as string;
   const [currentStep, setCurrentStep] = useState<VerifyStep>("uploading");
   const [proofImage, setProofImage] = useState<string | null>(null);
+  const [proofType, setProofType] = useState<"photo" | "video">("photo");
   const [result, setResult] = useState<VerificationResult | null>(null);
   const [sceneDescription, setSceneDescription] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -79,18 +80,21 @@ export default function VerifyPage() {
       imageData: string;
       capturedAt?: number;
       acceptedAt?: number;
+      type?: "photo" | "video";
     };
     setProofImage(parsed.imageData);
+    setProofType(parsed.type || "photo");
 
     updateChallenge(challengeId, { status: "VERIFYING" });
     runVerification(parsed);
   }, [challengeId]);
 
-  async function runVerification(proofData: { 
-    challengeId: string; 
-    imageData: string; 
+  async function runVerification(proofData: {
+    challengeId: string;
+    imageData: string;
     capturedAt?: number;
     acceptedAt?: number;
+    type?: "photo" | "video";
   }) {
     try {
       setCurrentStep("uploading");
@@ -113,6 +117,7 @@ export default function VerifyPage() {
           escrowSequence: challenge?.escrowSequence,
           capturedAt: proofData.capturedAt,
           acceptedAt: proofData.acceptedAt,
+          mediaType: proofData.type === "video" ? "video" : "image",
         }),
       });
 
@@ -165,6 +170,7 @@ export default function VerifyPage() {
           sceneDescription: scene,
         },
         settlementTx: verification.settlementTx,
+        proofMediaType: proofData.type === "video" ? "video" : "image",
       });
 
       setTimeout(() => {
@@ -203,7 +209,22 @@ export default function VerifyPage() {
 
       <main className="flex-1 max-w-xl mx-auto px-4 py-8 w-full">
         {/* Proof reveal */}
-        {proofImage && (
+        {proofImage && proofType === "video" ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="mb-8 max-w-xs mx-auto rounded-xl overflow-hidden border border-zinc-200"
+          >
+            <video
+              src={proofImage}
+              className="w-full aspect-video object-cover"
+              autoPlay
+              loop
+              muted
+              playsInline
+            />
+          </motion.div>
+        ) : proofImage ? (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -211,7 +232,7 @@ export default function VerifyPage() {
           >
             <ProofReveal imageUrl={proofImage} state={proofRevealState} />
           </motion.div>
-        )}
+        ) : null}
         {!proofImage && (
           <div className="w-full max-w-xs mx-auto aspect-video rounded-xl bg-zinc-100 animate-pulse mb-8" />
         )}

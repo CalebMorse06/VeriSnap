@@ -1,9 +1,9 @@
 "use client";
 
 import { useParams, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Home, ChevronLeft, ExternalLink, AlertTriangle, Eye, ThumbsUp, ThumbsDown, Link2, CheckCircle2 } from "lucide-react";
+import { Home, ChevronLeft, ExternalLink, AlertTriangle, Eye, ThumbsUp, ThumbsDown, Link2, CheckCircle2, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TrustPillars } from "@/components/ui/trust-badge";
 import { ShareOptions } from "@/components/challenge/ShareOptions";
@@ -44,6 +44,7 @@ export default function ResultPage() {
   const passed = searchParams.get("passed") === "true";
   const [challenge, setChallenge] = useState<ChallengeData | null>(getChallenge(challengeId));
   const [proofImage, setProofImage] = useState<string | null>(null);
+  const [proofType, setProofType] = useState<"photo" | "video">("photo");
   const [verification, setVerification] = useState<VerificationData | null>(null);
   const [settlementDone, setSettlementDone] = useState(false);
   const [proofRevealState, setProofRevealState] = useState<"locked" | "revealing" | "revealed">("locked");
@@ -54,6 +55,11 @@ export default function ResultPage() {
   const [disputeReason, setDisputeReason] = useState("");
   const [disputeLoading, setDisputeLoading] = useState(false);
   const [dispute, setDispute] = useState<DisputeData | null>(null);
+  const [nftTxHash, setNftTxHash] = useState<string | null>(null);
+  const [nftExplorerUrl, setNftExplorerUrl] = useState<string | null>(null);
+  const [nftChain, setNftChain] = useState<string | null>(null);
+  const [nftMinting, setNftMinting] = useState(false);
+  const nftMintStarted = useRef(false);
 
   useEffect(() => {
     let mounted = true;
@@ -102,6 +108,7 @@ export default function ResultPage() {
     if (proofData) {
       const parsed = JSON.parse(proofData);
       setProofImage(parsed.imageData);
+      if (parsed.type === "video") setProofType("video");
     }
 
     const verificationResult = sessionStorage.getItem("verificationResult");
@@ -120,6 +127,42 @@ export default function ResultPage() {
     }
 
     return () => { mounted = false; };
+  }, [passed, challengeId]);
+
+  // Mint NFT trophy on pass
+  useEffect(() => {
+    if (!passed || nftMintStarted.current) return;
+    nftMintStarted.current = true;
+
+    const proofData = sessionStorage.getItem("proofData");
+    const verResult = sessionStorage.getItem("verificationResult");
+    const pc = verResult ? JSON.parse(verResult).proofCid : undefined;
+    const ch = getChallenge(challengeId);
+
+    const verParsed = verResult ? JSON.parse(verResult) : {};
+
+    setNftMinting(true);
+    fetch("/api/nft/mint", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        challengeId,
+        proofCid: pc || ch?.proofCid,
+        challengeTitle: ch?.title,
+        confidence: verParsed.confidence || 0,
+      }),
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setNftTxHash(data.txHash || data.digest);
+          setNftExplorerUrl(data.explorerUrl);
+          setNftChain(data.chain);
+          console.log(`[NFT] Minted on ${data.chain}:`, data.txHash || data.digest);
+        }
+      })
+      .catch(err => console.warn("[NFT] Mint failed:", err))
+      .finally(() => setNftMinting(false));
   }, [passed, challengeId]);
 
   const confidence = verification?.confidence ?? (passed ? 94 : 32);
@@ -228,7 +271,23 @@ export default function ResultPage() {
         )}
 
         {/* Proof reveal */}
-        {proofImage && (
+        {proofImage && proofType === "video" ? (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: settlementDone ? 1 : 0, y: settlementDone ? 0 : 10 }}
+            transition={{ duration: 0.4 }}
+            className="mb-6 rounded-xl overflow-hidden border border-[var(--vs-border)]"
+          >
+            <video
+              src={proofImage}
+              className="w-full aspect-video object-cover"
+              autoPlay
+              loop
+              muted
+              playsInline
+            />
+          </motion.div>
+        ) : proofImage ? (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: settlementDone ? 1 : 0, y: settlementDone ? 0 : 10 }}
@@ -237,7 +296,7 @@ export default function ResultPage() {
           >
             <ProofReveal imageUrl={proofImage} state={proofRevealState} />
           </motion.div>
-        )}
+        ) : null}
 
         {/* Verification details */}
         <motion.div
@@ -408,6 +467,42 @@ export default function ResultPage() {
                 )}
               </div>
             </div>
+            {/* NFT Trophy */}
+            {passed && (
+              <div className="flex items-center gap-3">
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  nftTxHash ? "bg-purple-100" : "bg-zinc-100"
+                }`}>
+                  {nftMinting ? (
+                    <div className="w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Award className={`w-4 h-4 ${nftTxHash ? "text-purple-600" : "text-zinc-400"}`} />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-[var(--vs-text-primary)]">
+                    NFT Trophy {nftChain === "sui" ? "(SUI)" : nftChain === "xrpl" ? "(XRPL)" : ""}
+                  </p>
+                  {nftTxHash && nftExplorerUrl ? (
+                    <a
+                      href={nftExplorerUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] font-mono text-purple-600 hover:text-purple-700 flex items-center gap-1"
+                    >
+                      {nftTxHash.slice(0, 16)}...
+                      <ExternalLink className="w-2.5 h-2.5" />
+                    </a>
+                  ) : nftTxHash ? (
+                    <p className="text-[11px] font-mono text-purple-600">{nftTxHash.slice(0, 16)}...</p>
+                  ) : nftMinting ? (
+                    <p className="text-[11px] text-purple-500">Minting on-chain...</p>
+                  ) : (
+                    <p className="text-[11px] text-[var(--vs-text-tertiary)]">Pending</p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
           <p className="text-[10px] text-[var(--vs-text-tertiary)] mt-3 pt-2 border-t border-[var(--vs-border-subtle)]">
             Challenge ID embedded in XRPL memo field

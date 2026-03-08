@@ -34,6 +34,7 @@ export interface ChallengeData {
     sceneDescription?: string;
   };
   settlementTx?: string;
+  proofMediaType?: "image" | "video";
 }
 
 const STORAGE_KEY = "verisnap_challenges";

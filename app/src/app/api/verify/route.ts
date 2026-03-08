@@ -7,6 +7,15 @@ import { verifySchema } from "@/lib/schemas";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { validateProofServer } from "@/lib/proof-validation";
 
+// Allow large video uploads (default is 4MB)
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: "50mb",
+    },
+  },
+};
+
 interface VerifyRequest {
   challengeId: string;
   imageData: string; // base64
@@ -16,6 +25,7 @@ interface VerifyRequest {
   escrowSequence?: number;
   capturedAt?: number; // timestamp when photo was taken
   acceptedAt?: number; // timestamp when challenge was accepted
+  mediaType?: "image" | "video";
 }
 
 export async function POST(request: NextRequest) {
@@ -36,9 +46,11 @@ export async function POST(request: NextRequest) {
     }
 
     const { challengeId, imageData, challengeObjective, participantAddress, escrowOwner, escrowSequence, acceptedAt, capturedAt } = parsed.data;
+    const mediaType = (body.mediaType === "video" ? "video" : "image") as "image" | "video";
 
-    if (imageData.length > 12_000_000) {
-      return NextResponse.json({ success: false, error: "Image payload too large" }, { status: 413 });
+    const maxSize = mediaType === "video" ? 50_000_000 : 12_000_000;
+    if (imageData.length > maxSize) {
+      return NextResponse.json({ success: false, error: "Payload too large" }, { status: 413 });
     }
 
     // 0. Server-side proof validation
@@ -61,13 +73,13 @@ export async function POST(request: NextRequest) {
       challengeId,
       timestamp: new Date().toISOString(),
       participantAddress,
-    });
+    }, mediaType);
     console.log("[Verify] Uploaded:", upload.cid);
 
     // 2. Create scoped verifier link + verify with Gemini
     const verifierLink = await createVerifierAccessLink(upload.cid);
     console.log("[Verify] Verifying with Gemini...");
-    const verification = await verifyProof(imageData, challengeObjective, `Private proof link: ${verifierLink}`);
+    const verification = await verifyProof(imageData, challengeObjective, `Private proof link: ${verifierLink}`, mediaType);
     console.log("[Verify] Result:", verification);
 
     // 3. Settle on XRPL (if passed and escrow details are provided)
@@ -140,6 +152,7 @@ export async function POST(request: NextRequest) {
       settlementTx,
       payoutTx,
       settlementError,
+      mediaType,
     });
   } catch (error) {
     console.error("[Verify] Error:", error);

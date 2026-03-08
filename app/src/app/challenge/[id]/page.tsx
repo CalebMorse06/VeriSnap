@@ -12,17 +12,19 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { QRCodeSVG } from "qrcode.react";
 import Link from "next/link";
 import { getChallenge, updateChallenge, ChallengeData } from "@/lib/store/challenges";
+import { useWallet } from "@/lib/wallet-context";
 
 export default function ChallengePage() {
   const params = useParams();
   const router = useRouter();
+  const wallet = useWallet();
   const challengeId = params.id as string;
   const [challenge, setChallenge] = useState<ChallengeData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selfStarted, setSelfStarted] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
-  const [showQr, setShowQr] = useState(false);
+  const [showQr, setShowQr] = useState(true);
 
   useEffect(() => {
     let mounted = true;
@@ -105,6 +107,7 @@ export default function ChallengePage() {
 
   const isSelfChallenge = challenge?.challengeMode === "self";
   const isBounty = challenge?.challengeMode === "bounty";
+  const isCreator = wallet.address && challenge?.creatorAddress === wallet.address;
 
   if (loading) {
     return (
@@ -438,7 +441,16 @@ export default function ChallengePage() {
             </div>
           )}
 
-          {!isSelfChallenge && (
+          {!isSelfChallenge && isCreator && (
+            <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200 text-center space-y-2">
+              <p className="text-sm font-medium text-[var(--vs-text-primary)]">Waiting for opponent</p>
+              <p className="text-xs text-[var(--vs-text-tertiary)]">
+                Share the QR code or link above for someone to accept
+              </p>
+            </div>
+          )}
+
+          {!isSelfChallenge && !isCreator && (
             <>
               <Button
                 size="lg"

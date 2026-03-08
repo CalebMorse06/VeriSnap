@@ -3,7 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, RefreshCw, X, Clock, AlertCircle, ArrowRight, Lock } from "lucide-react";
+import { Camera, Video, RefreshCw, X, Clock, AlertCircle, ArrowRight, Lock } from "lucide-react";
 import { updateChallenge, getChallenge, saveChallenge, ChallengeData } from "@/lib/store/challenges";
 import { TrustBadge } from "@/components/ui/trust-badge";
 import { Button } from "@/components/ui/button";
@@ -48,15 +48,24 @@ export default function CapturePage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  
+
   const [state, setState] = useState<CaptureState>("initializing");
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [capturedVideo, setCapturedVideo] = useState<string | null>(null);
   const [capturedAt, setCapturedAt] = useState<number | null>(null);
   const [countdown, setCountdown] = useState(3);
   const [error, setError] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
+
+  // Video recording state
+  const [mode, setMode] = useState<"photo" | "video">("photo");
+  const [recording, setRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Load challenge timer if exists
   useEffect(() => {
@@ -94,12 +103,12 @@ export default function CapturePage() {
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
-      
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
       }
-      
+
       setState("ready");
       setError(null);
     } catch (err) {
@@ -125,7 +134,7 @@ export default function CapturePage() {
   const startCountdown = () => {
     setState("countdown");
     setCountdown(3);
-    
+
     const timer = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
@@ -143,23 +152,23 @@ export default function CapturePage() {
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    
+
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-    
+
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    
+
     if (facingMode === "user") {
       ctx.translate(canvas.width, 0);
       ctx.scale(-1, 1);
     }
-    
+
     ctx.drawImage(video, 0, 0);
-    
+
     const imageData = canvas.toDataURL("image/jpeg", 0.9);
     const timestamp = Date.now();
-    
+
     setCapturedImage(imageData);
     setCapturedAt(timestamp);
     setState("captured");
@@ -176,22 +185,90 @@ export default function CapturePage() {
     }
   };
 
+  // Video recording functions
+  const startRecording = () => {
+    const stream = streamRef.current;
+    if (!stream) return;
+    chunksRef.current = [];
+    setRecordingTime(0);
+
+    const recorder = new MediaRecorder(stream, {
+      mimeType: MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+        ? "video/webm;codecs=vp9"
+        : "video/webm",
+    });
+    recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+    recorder.onstop = () => {
+      const blob = new Blob(chunksRef.current, { type: "video/webm" });
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCapturedVideo(reader.result as string);
+        setCapturedAt(Date.now());
+        setState("captured");
+      };
+      reader.readAsDataURL(blob);
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    };
+    recorder.start();
+    mediaRecorderRef.current = recorder;
+    setRecording(true);
+
+    // Tick recording time
+    recordingTimerRef.current = setInterval(() => {
+      setRecordingTime(prev => prev + 1);
+    }, 1000);
+
+    // Auto-stop after 15s
+    setTimeout(() => {
+      if (mediaRecorderRef.current?.state === "recording") stopRecording();
+    }, 15000);
+  };
+
+  const stopRecording = () => {
+    mediaRecorderRef.current?.stop();
+    setRecording(false);
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+    }
+  };
+
+  const handleCaptureButton = () => {
+    if (mode === "photo") {
+      startCountdown();
+    } else {
+      if (recording) {
+        stopRecording();
+      } else {
+        startRecording();
+      }
+    }
+  };
+
   const retake = () => {
     setCapturedImage(null);
+    setCapturedVideo(null);
     setCapturedAt(null);
     setValidationError(null);
+    setRecordingTime(0);
     setState("initializing");
     startCamera();
   };
 
   const submitProof = () => {
-    if (!capturedImage || !capturedAt) return;
+    const proofMedia = mode === "video" ? capturedVideo : capturedImage;
+    if (!proofMedia || !capturedAt) return;
 
-    // Final validation check
-    const validation = validateProofImage(capturedImage, capturedAt);
-    if (!validation.valid) {
-      setValidationError(validation.errors[0]);
-      return;
+    // For photos, validate
+    if (mode === "photo" && capturedImage) {
+      const validation = validateProofImage(capturedImage, capturedAt);
+      if (!validation.valid) {
+        setValidationError(validation.errors[0]);
+        return;
+      }
     }
 
     // Store proof data with timestamps
@@ -200,9 +277,10 @@ export default function CapturePage() {
 
     sessionStorage.setItem("proofData", JSON.stringify({
       challengeId,
-      imageData: capturedImage,
+      imageData: proofMedia,
       capturedAt,
       acceptedAt,
+      type: mode,
     }));
 
     updateChallenge(challengeId, { status: "PROOF_SUBMITTED" });
@@ -219,6 +297,14 @@ export default function CapturePage() {
 
   return (
     <div className="min-h-screen bg-zinc-900 flex flex-col">
+      {/* Challenge info bar */}
+      {challenge && state !== "captured" && (
+        <div className="bg-zinc-800 border-b border-zinc-700 px-4 py-3">
+          <p className="text-white font-semibold text-sm truncate">{challenge.title}</p>
+          <p className="text-zinc-400 text-xs mt-0.5 line-clamp-2">{challenge.objective}</p>
+        </div>
+      )}
+
       {/* Timer bar */}
       {timeRemaining !== null && (
         <div className={`px-4 py-3 flex items-center justify-between ${
@@ -248,19 +334,17 @@ export default function CapturePage() {
           } ${state === "captured" ? "hidden" : ""}`}
         />
 
-        {/* Captured image */}
-        {capturedImage && state === "captured" && (
+        {/* Captured image preview */}
+        {capturedImage && state === "captured" && mode === "photo" && (
           <div className="absolute inset-0">
             <img
               src={capturedImage}
               alt="Captured proof"
               className="w-full h-full object-cover"
             />
-            {/* Badge */}
             <div className="absolute top-4 left-4">
               <TrustBadge variant="private" size="sm" animated={false} showIcon />
             </div>
-            {/* Status */}
             <div className="absolute bottom-24 left-1/2 -translate-x-1/2">
               <div className="px-4 py-2 rounded-lg bg-zinc-900/80 backdrop-blur-sm flex items-center gap-2">
                 <Lock className="w-4 h-4 text-emerald-400" />
@@ -269,6 +353,39 @@ export default function CapturePage() {
                 </p>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Captured video preview */}
+        {capturedVideo && state === "captured" && mode === "video" && (
+          <div className="absolute inset-0">
+            <video
+              src={capturedVideo}
+              className="w-full h-full object-cover"
+              autoPlay
+              loop
+              muted
+              playsInline
+            />
+            <div className="absolute top-4 left-4">
+              <TrustBadge variant="private" size="sm" animated={false} showIcon />
+            </div>
+            <div className="absolute bottom-24 left-1/2 -translate-x-1/2">
+              <div className="px-4 py-2 rounded-lg bg-zinc-900/80 backdrop-blur-sm flex items-center gap-2">
+                <Lock className="w-4 h-4 text-emerald-400" />
+                <p className="text-white text-sm font-medium">
+                  Video ready for upload
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Recording indicator */}
+        {recording && (
+          <div className="absolute top-4 right-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-600/90 backdrop-blur-sm">
+            <div className="w-2.5 h-2.5 rounded-full bg-white animate-pulse" />
+            <span className="text-white text-sm font-mono font-bold">{formatTime(recordingTime)}</span>
           </div>
         )}
 
@@ -338,7 +455,7 @@ export default function CapturePage() {
         </AnimatePresence>
 
         {/* Guide frame */}
-        {state === "ready" && (
+        {state === "ready" && !recording && (
           <div className="absolute inset-0 pointer-events-none">
             <div className="absolute inset-8 border-2 border-white/20 rounded-xl">
               <div className="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 border-white rounded-tl-lg" />
@@ -364,20 +481,61 @@ export default function CapturePage() {
           </div>
         )}
 
-        {state === "ready" && !isExpired && (
+        {/* Photo/Video mode toggle */}
+        {state === "ready" && !isExpired && !recording && (
+          <div className="flex items-center justify-center gap-1 mb-4">
+            <button
+              onClick={() => setMode("photo")}
+              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                mode === "photo"
+                  ? "bg-white text-zinc-900"
+                  : "bg-zinc-800 text-zinc-400 hover:text-white"
+              }`}
+            >
+              <Camera className="w-3.5 h-3.5" />
+              Photo
+            </button>
+            <button
+              onClick={() => setMode("video")}
+              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                mode === "video"
+                  ? "bg-white text-zinc-900"
+                  : "bg-zinc-800 text-zinc-400 hover:text-white"
+              }`}
+            >
+              <Video className="w-3.5 h-3.5" />
+              Video
+            </button>
+          </div>
+        )}
+
+        {(state === "ready" || recording) && !isExpired && (
           <div className="flex items-center justify-center gap-6">
             <button
               onClick={flipCamera}
               className="w-12 h-12 rounded-full bg-zinc-800 flex items-center justify-center"
+              disabled={recording}
             >
-              <RefreshCw className="w-5 h-5 text-white" />
+              <RefreshCw className={`w-5 h-5 ${recording ? "text-zinc-600" : "text-white"}`} />
             </button>
 
             <button
-              onClick={startCountdown}
-              className="w-20 h-20 rounded-full bg-white flex items-center justify-center ring-4 ring-white/20"
+              onClick={handleCaptureButton}
+              className={`w-20 h-20 rounded-full flex items-center justify-center ring-4 ${
+                recording
+                  ? "bg-red-600 ring-red-400/30"
+                  : mode === "video"
+                  ? "bg-red-500 ring-red-400/20"
+                  : "bg-white ring-white/20"
+              }`}
             >
-              <div className="w-16 h-16 rounded-full bg-white border-4 border-zinc-900" />
+              {recording ? (
+                <div className="w-8 h-8 rounded-sm bg-white" />
+              ) : mode === "video" ? (
+                <div className="w-10 h-10 rounded-full bg-red-500 border-4 border-white" />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-white border-4 border-zinc-900" />
+              )}
             </button>
 
             <div className="w-12 h-12" />
@@ -387,8 +545,8 @@ export default function CapturePage() {
         {isExpired && state !== "captured" && (
           <div className="text-center">
             <p className="text-red-400 font-medium mb-4">Time expired — challenge failed</p>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="border-zinc-700 text-white"
               onClick={() => router.push("/")}
             >

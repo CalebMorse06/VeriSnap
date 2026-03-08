@@ -26,14 +26,18 @@ export async function uploadProofPrivate(
     challengeId: string;
     timestamp: string;
     participantAddress?: string;
-  }
+  },
+  mediaType: "image" | "video" = "image"
 ): Promise<UploadResult> {
-  const base64Data = imageData.replace(/^data:image\/\w+;base64,/, "");
+  const base64Data = imageData.replace(/^data:(image|video)\/[\w.+-]+;base64,/, "");
   const buffer = Buffer.from(base64Data, "base64");
-  const blob = new Blob([buffer], { type: "image/jpeg" });
+  const isVideo = mediaType === "video";
+  const mimeType = isVideo ? "video/webm" : "image/jpeg";
+  const ext = isVideo ? "webm" : "jpg";
+  const blob = new Blob([buffer], { type: mimeType });
 
   const formData = new FormData();
-  formData.append("file", blob, `proof-${metadata.challengeId}-${Date.now()}.jpg`);
+  formData.append("file", blob, `proof-${metadata.challengeId}-${Date.now()}.${ext}`);
   formData.append("pinataMetadata", JSON.stringify({
     name: `VeriSnap Proof - ${metadata.challengeId}`,
     keyvalues: {

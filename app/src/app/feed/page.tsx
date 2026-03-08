@@ -19,6 +19,7 @@ interface FeedItem {
   passed: boolean;
   confidence: number;
   proofCid: string;
+  proofMediaType: "image" | "video";
   settlementTx: string;
   resolvedAt: string;
 }
@@ -146,15 +147,26 @@ function FeedCard({ item }: { item: FeedItem }) {
 
   return (
     <div className="bg-white rounded-2xl border border-[var(--vs-border)] overflow-hidden hover:shadow-lg transition-shadow">
-      {/* Proof image */}
+      {/* Proof media */}
       {proofUrl && (
         <div className="relative aspect-video bg-zinc-100">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={proofUrl}
-            alt="Challenge proof"
-            className="w-full h-full object-cover"
-          />
+          {item.proofMediaType === "video" ? (
+            <video
+              src={proofUrl}
+              className="w-full h-full object-cover"
+              autoPlay
+              loop
+              muted
+              playsInline
+            />
+          ) : (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={proofUrl}
+              alt="Challenge proof"
+              className="w-full h-full object-cover"
+            />
+          )}
           {/* Outcome badge - top right */}
           <div className={`absolute top-3 right-3 px-2.5 py-1 rounded-md flex items-center gap-1.5 text-sm font-medium ${
             item.passed 
