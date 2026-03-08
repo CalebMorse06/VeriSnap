@@ -3,13 +3,14 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Clock, MapPin, Camera, CheckCircle2, AlertTriangle, ChevronLeft, User } from "lucide-react";
+import { Clock, MapPin, Camera, CheckCircle2, AlertTriangle, ChevronLeft, User, Lock, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TrustBadge, TrustPillars } from "@/components/ui/trust-badge";
 import { EscrowLockAnimation } from "@/components/animations/EscrowLockAnimation";
 import { MoneyFlowVisualization } from "@/components/animations/MoneyFlowVisualization";
 import { getChallenge, saveChallenge, updateChallenge, ChallengeData } from "@/lib/store/challenges";
 import { useWallet } from "@/lib/wallet-context";
+import { WalletButton } from "@/components/wallet/WalletButton";
 import Link from "next/link";
 
 import { Skeleton } from "@/components/ui/skeleton";
@@ -149,6 +150,58 @@ export default function AcceptChallengePage() {
     );
   }
 
+  // Wallet gate checks
+  const needsWallet = challenge.opponentAddress && !wallet.isConnected;
+  const walletMismatch = challenge.opponentAddress && wallet.address && challenge.opponentAddress !== wallet.address;
+
+  if (needsWallet) {
+    return (
+      <div className="min-h-screen bg-[var(--vs-bg-primary)] flex items-center justify-center p-6">
+        <div className="max-w-sm w-full text-center space-y-4">
+          <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center mx-auto">
+            <Wallet className="w-7 h-7 text-amber-600" />
+          </div>
+          <h2 className="text-lg font-semibold text-[var(--vs-text-primary)]">Connect your wallet to accept</h2>
+          <p className="text-sm text-[var(--vs-text-secondary)]">
+            This challenge targets a specific wallet. Connect yours to continue.
+          </p>
+          <div className="flex justify-center">
+            <WalletButton />
+          </div>
+          <Link href={`/challenge/${id}`}>
+            <Button variant="ghost" className="text-[var(--vs-text-tertiary)]">Go Back</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (walletMismatch) {
+    return (
+      <div className="min-h-screen bg-[var(--vs-bg-primary)] flex items-center justify-center p-6">
+        <div className="max-w-sm w-full text-center space-y-4">
+          <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto">
+            <Lock className="w-7 h-7 text-red-600" />
+          </div>
+          <h2 className="text-lg font-semibold text-[var(--vs-text-primary)]">Wrong wallet</h2>
+          <p className="text-sm text-[var(--vs-text-secondary)]">
+            This challenge targets wallet{" "}
+            <span className="font-mono text-[var(--vs-text-primary)]">
+              {challenge.opponentAddress!.slice(0, 6)}...{challenge.opponentAddress!.slice(-4)}
+            </span>.
+            Connect the correct wallet.
+          </p>
+          <div className="flex justify-center">
+            <WalletButton />
+          </div>
+          <Link href={`/challenge/${id}`}>
+            <Button variant="ghost" className="text-[var(--vs-text-tertiary)]">Go Back</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   // Pre-accept state
   if (!accepted) {
     return (
@@ -230,19 +283,42 @@ export default function AcceptChallengePage() {
             </div>
           </section>
 
-          {/* Wallet-identity framing */}
+          {/* Wallet setup — generate or show connected */}
           <section className="mb-6">
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-zinc-50 border border-zinc-200">
-              <img
-                src="/illustrations/accept-challenge.jpg"
-                alt="Trustless agreement"
-                className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
-                draggable={false}
-              />
-              <p className="text-xs text-[var(--vs-text-secondary)]">
-                No sign-up required — secured by XRPL escrow, not accounts.
-              </p>
-            </div>
+            {wallet.isConnected ? (
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200">
+                <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                  <Wallet className="w-4 h-4 text-emerald-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-emerald-700">Your wallet</p>
+                  <p className="text-sm font-mono text-emerald-900 truncate">{wallet.address}</p>
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 rounded-xl bg-amber-50 border border-amber-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <Wallet className="w-4 h-4 text-amber-600" />
+                  <p className="text-sm font-medium text-amber-900">Get a wallet to receive your winnings</p>
+                </div>
+                <p className="text-xs text-amber-700 mb-3">
+                  One tap — we&apos;ll create a free XRPL testnet wallet for you. Winnings go directly to it.
+                </p>
+                <button
+                  onClick={async () => {
+                    try {
+                      await wallet.generateTestnet();
+                    } catch (err) {
+                      console.warn("[Accept] Wallet generation failed:", err);
+                    }
+                  }}
+                  className="w-full py-2.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <Wallet className="w-4 h-4" />
+                  Generate My Wallet
+                </button>
+              </div>
+            )}
           </section>
 
           {/* Money flow animation */}

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { uploadProofPrivate, createVerifierAccessLink } from "@/lib/pinata";
 import { verifyProof } from "@/lib/gemini";
-import { finishEscrow, Wallet } from "@/lib/xrpl";
+import { finishEscrow, sendPayout, Wallet, dropsToXrp } from "@/lib/xrpl";
 import { requireEnv } from "@/lib/env";
 import { verifySchema } from "@/lib/schemas";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
@@ -72,13 +72,14 @@ export async function POST(request: NextRequest) {
 
     // 3. Settle on XRPL (if passed and escrow details are provided)
     let settlementTx: string | null = null;
+    let payoutTx: string | null = null;
     let settlementError: string | null = null;
-    
+
     if (verification.passed && escrowOwner && typeof escrowSequence === "number") {
       console.log("[Verify] Settling on XRPL via EscrowFinish...");
       const seed = requireEnv("XRPL_APP_WALLET_SEED");
       const appWallet = Wallet.fromSeed(seed);
-      
+
       // Retry settlement up to 3 times
       for (let attempt = 1; attempt <= 3; attempt++) {
         try {
@@ -94,6 +95,40 @@ export async function POST(request: NextRequest) {
           }
         }
       }
+
+      // 4. Send payout to participant's wallet (if provided and settlement succeeded)
+      if (settlementTx && participantAddress && participantAddress.startsWith("r")) {
+        console.log("[Verify] Sending payout to participant:", participantAddress);
+        // Look up the challenge stake from Supabase to get the correct amount
+        let payoutAmountXrp = 10; // fallback
+        try {
+          const { getSupabaseAdmin } = await import("@/lib/supabase");
+          const supabase = getSupabaseAdmin();
+          if (supabase) {
+            const { data: challengeRow } = await supabase
+              .from("challenges")
+              .select("stake_amount_drops")
+              .eq("id", challengeId)
+              .single();
+            if (challengeRow?.stake_amount_drops) {
+              payoutAmountXrp = Number(dropsToXrp(String(challengeRow.stake_amount_drops)));
+            }
+          }
+        } catch (err) {
+          console.warn("[Verify] Could not look up stake amount:", err);
+        }
+
+        for (let attempt = 1; attempt <= 2; attempt++) {
+          try {
+            payoutTx = await sendPayout(appWallet, participantAddress, payoutAmountXrp, challengeId);
+            console.log("[Verify] Payout successful:", payoutTx);
+            break;
+          } catch (err) {
+            console.error(`[Verify] Payout attempt ${attempt} failed:`, err);
+            if (attempt < 2) await new Promise(r => setTimeout(r, 1000));
+          }
+        }
+      }
     }
 
     return NextResponse.json({
@@ -103,6 +138,7 @@ export async function POST(request: NextRequest) {
       verification,
       sceneDescription: verification.sceneDescription || "",
       settlementTx,
+      payoutTx,
       settlementError,
     });
   } catch (error) {

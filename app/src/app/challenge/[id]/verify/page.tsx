@@ -5,6 +5,7 @@ import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertCircle, CheckCircle2, ChevronLeft, Eye } from "lucide-react";
 import { getChallenge, saveChallenge, updateChallenge, ChallengeData } from "@/lib/store/challenges";
+import { useWallet } from "@/lib/wallet-context";
 import { TrustPillars } from "@/components/ui/trust-badge";
 import { Button } from "@/components/ui/button";
 import { ProofPipeline } from "@/components/animations/ProofPipeline";
@@ -20,12 +21,14 @@ interface VerificationResult {
   sceneDescription?: string;
   proofCid?: string;
   settlementTx?: string;
+  payoutTx?: string;
   settlementError?: string;
 }
 
 export default function VerifyPage() {
   const params = useParams();
   const router = useRouter();
+  const wallet = useWallet();
   const challengeId = params.id as string;
   const [currentStep, setCurrentStep] = useState<VerifyStep>("uploading");
   const [proofImage, setProofImage] = useState<string | null>(null);
@@ -105,6 +108,7 @@ export default function VerifyPage() {
           challengeId: proofData.challengeId,
           imageData: proofData.imageData,
           challengeObjective,
+          participantAddress: wallet.address || challenge?.acceptorAddress,
           escrowOwner: challenge?.escrowOwner,
           escrowSequence: challenge?.escrowSequence,
           capturedAt: proofData.capturedAt,
@@ -135,6 +139,7 @@ export default function VerifyPage() {
         sceneDescription: scene,
         proofCid: data.proofCid,
         settlementTx: data.settlementTx,
+        payoutTx: data.payoutTx || undefined,
         settlementError: data.settlementError || undefined,
       };
 

@@ -45,8 +45,8 @@ export function WalletButton() {
         onClick={() => setOpen(!open)}
         className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
           isConnected
-            ? "bg-emerald-900/50 text-emerald-300 hover:bg-emerald-900/70"
-            : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+            ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+            : "bg-zinc-100 text-zinc-600 border border-zinc-200 hover:bg-zinc-200"
         }`}
       >
         {isConnected ? (

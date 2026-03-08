@@ -22,6 +22,7 @@ export interface Challenge {
   stakeAmount: number; // in drops (XRP)
   creatorAddress: string;
   participantAddress?: string;
+  challengeMode?: "self" | "versus" | "bounty";
   status: ChallengeStatus;
   proofCid?: string; // Pinata CID
   verificationResult?: {

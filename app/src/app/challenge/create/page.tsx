@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ChevronLeft, MapPin, Clock, Lock, ArrowRight, RotateCcw, ExternalLink, User, Users, Wand2, Shield, Sparkles, Copy, Check } from "lucide-react";
+import { ChevronLeft, MapPin, Clock, Lock, ArrowRight, RotateCcw, ExternalLink, User, Users, Globe, Wand2, Shield, Sparkles, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TrustBadge, TrustPillars } from "@/components/ui/trust-badge";
@@ -56,7 +56,7 @@ export default function CreateChallengePage() {
   const wallet = useWallet();
   const [selectedPreset, setSelectedPreset] = useState<string | null>("campanile");
   const [isCustom, setIsCustom] = useState(false);
-  const [challengeMode, setChallengeMode] = useState<"self" | "versus">("self");
+  const [challengeMode, setChallengeMode] = useState<"self" | "versus" | "bounty">("self");
   const [creationStep, setCreationStep] = useState<CreationStep>("idle");
   const [creationError, setCreationError] = useState<string | null>(null);
   const [escrowImgError, setEscrowImgError] = useState(false);
@@ -238,39 +238,52 @@ export default function CreateChallengePage() {
           <h2 className="text-sm font-medium text-[var(--vs-text-secondary)] uppercase tracking-wider mb-3">
             Challenge Type
           </h2>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <button
               onClick={() => setChallengeMode("self")}
-              className={`p-3 rounded-xl text-left transition-all border flex items-center gap-3 ${
+              className={`p-3 rounded-xl text-left transition-all border flex flex-col items-center gap-1.5 text-center ${
                 challengeMode === "self"
                   ? "bg-emerald-50 border-emerald-200"
                   : "bg-white border-[var(--vs-border)] hover:border-zinc-300"
               }`}
             >
               <User className={`w-5 h-5 ${challengeMode === "self" ? "text-emerald-600" : "text-zinc-400"}`} />
-              <div>
-                <p className="font-medium text-sm text-[var(--vs-text-primary)]">Challenge myself</p>
-                <p className="text-xs text-[var(--vs-text-tertiary)]">Bet on yourself</p>
-              </div>
+              <p className="font-medium text-sm text-[var(--vs-text-primary)]">Solo</p>
+              <p className="text-[10px] text-[var(--vs-text-tertiary)] leading-tight">Bet on yourself</p>
             </button>
             <button
               onClick={() => setChallengeMode("versus")}
-              className={`p-3 rounded-xl text-left transition-all border flex items-center gap-3 ${
+              className={`p-3 rounded-xl text-left transition-all border flex flex-col items-center gap-1.5 text-center ${
                 challengeMode === "versus"
                   ? "bg-emerald-50 border-emerald-200"
                   : "bg-white border-[var(--vs-border)] hover:border-zinc-300"
               }`}
             >
               <Users className={`w-5 h-5 ${challengeMode === "versus" ? "text-emerald-600" : "text-zinc-400"}`} />
-              <div>
-                <p className="font-medium text-sm text-[var(--vs-text-primary)]">Challenge someone</p>
-                <p className="text-xs text-[var(--vs-text-tertiary)]">Dare a friend</p>
-              </div>
+              <p className="font-medium text-sm text-[var(--vs-text-primary)]">Versus</p>
+              <p className="text-[10px] text-[var(--vs-text-tertiary)] leading-tight">Dare a friend</p>
+            </button>
+            <button
+              onClick={() => setChallengeMode("bounty")}
+              className={`p-3 rounded-xl text-left transition-all border flex flex-col items-center gap-1.5 text-center ${
+                challengeMode === "bounty"
+                  ? "bg-amber-50 border-amber-200"
+                  : "bg-white border-[var(--vs-border)] hover:border-zinc-300"
+              }`}
+            >
+              <Globe className={`w-5 h-5 ${challengeMode === "bounty" ? "text-amber-600" : "text-zinc-400"}`} />
+              <p className="font-medium text-sm text-[var(--vs-text-primary)]">Bounty</p>
+              <p className="text-[10px] text-[var(--vs-text-tertiary)] leading-tight">Open to the world</p>
             </button>
           </div>
           {challengeMode === "self" && (
             <p className="text-xs text-emerald-700 mt-2 bg-emerald-50 rounded-lg px-3 py-2">
               Stake XRP on yourself. Complete the objective to earn it back.
+            </p>
+          )}
+          {challengeMode === "bounty" && (
+            <p className="text-xs text-amber-700 mt-2 bg-amber-50 rounded-lg px-3 py-2">
+              Anyone can attempt this challenge. First valid proof wins the bounty.
             </p>
           )}
         </section>
@@ -482,7 +495,7 @@ export default function CreateChallengePage() {
           </motion.section>
         )}
 
-        {/* Versus: friend's wallet address */}
+        {/* Versus: target wallet address */}
         {challengeMode === "versus" && (
           <motion.section
             initial={{ opacity: 0, height: 0 }}
@@ -490,7 +503,7 @@ export default function CreateChallengePage() {
             className="mb-6"
           >
             <label className="text-sm font-medium text-[var(--vs-text-secondary)] block mb-1.5">
-              Friend&apos;s wallet address <span className="text-[var(--vs-text-tertiary)] font-normal">(optional)</span>
+              Target wallet <span className="text-[var(--vs-text-tertiary)] font-normal">(optional)</span>
             </label>
             <Input
               placeholder="rFriendAddress..."
@@ -499,7 +512,7 @@ export default function CreateChallengePage() {
               className="rounded-lg border-[var(--vs-border)] font-mono text-sm"
             />
             <p className="text-xs text-[var(--vs-text-tertiary)] mt-1.5">
-              Leave blank to share the link with anyone
+              Only this wallet can accept. Leave blank for open challenge.
             </p>
           </motion.section>
         )}
@@ -545,13 +558,18 @@ export default function CreateChallengePage() {
         <section>
           {creationStep === "idle" && (
             <>
+              {wallet.address && (
+                <p className="text-center text-xs text-[var(--vs-text-tertiary)] mb-3">
+                  Creating as <span className="font-mono text-[var(--vs-text-secondary)]">{wallet.address.slice(0, 6)}...{wallet.address.slice(-4)}</span>
+                </p>
+              )}
               <Button
                 size="lg"
                 className="w-full h-12 gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm shadow-emerald-600/15"
                 onClick={handleCreate}
                 disabled={!preset && !isCustom}
               >
-                Create Challenge
+                Create {challengeMode === "bounty" ? "Bounty" : "Challenge"}
                 <ArrowRight className="w-4 h-4" />
               </Button>
               <p className="text-center text-xs text-[var(--vs-text-tertiary)] mt-3">
@@ -617,7 +635,7 @@ export default function CreateChallengePage() {
                   </a>
                 </div>
               </div>
-              {challengeMode === "versus" && (
+              {(challengeMode === "versus" || challengeMode === "bounty") && (
                 <Button
                   variant="outline"
                   size="lg"

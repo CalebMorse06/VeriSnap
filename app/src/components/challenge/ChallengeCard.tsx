@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { MapPin, Clock, ChevronRight, ArrowRight } from "lucide-react";
+import { MapPin, Clock, ChevronRight, ArrowRight, Globe } from "lucide-react";
 import { Challenge } from "@/types/challenge";
 import { TrustBadge } from "@/components/ui/trust-badge";
 
@@ -12,6 +12,7 @@ interface ChallengeCardProps {
 }
 
 export function ChallengeCard({ challenge, onAccept, onView }: ChallengeCardProps) {
+  const isBounty = challenge.challengeMode === "bounty";
   const isLive = challenge.status === "FUNDED" || challenge.status === "DRAFT";
   const isActive = challenge.status === "ACCEPTED" || challenge.status === "PROOF_SUBMITTED" || challenge.status === "VERIFYING";
   const isComplete = challenge.status === "PASSED" || challenge.status === "FAILED" || challenge.status === "SETTLED";
@@ -43,6 +44,12 @@ export function ChallengeCard({ challenge, onAccept, onView }: ChallengeCardProp
           <h3 className="text-base font-semibold text-[var(--vs-text-primary)] leading-tight flex-1 min-w-0 truncate tracking-tight">
             {challenge.title}
           </h3>
+          {isBounty && (
+            <span className="px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap tracking-wide bg-amber-100 text-amber-700 border border-amber-200 flex items-center gap-1">
+              <Globe className="w-3 h-3" />
+              Bounty
+            </span>
+          )}
           <span className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap tracking-wide ${status.bg} ${status.text}`}>
             {status.label}
           </span>
@@ -84,7 +91,7 @@ export function ChallengeCard({ challenge, onAccept, onView }: ChallengeCardProp
             }}
             className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
           >
-            Accept Challenge
+            {isBounty ? "Attempt Bounty" : "Accept Challenge"}
             <ArrowRight className="w-4 h-4" />
           </button>
         )}

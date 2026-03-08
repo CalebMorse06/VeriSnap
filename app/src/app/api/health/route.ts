@@ -9,6 +9,7 @@ export async function GET() {
     ok: allOk,
     service: "verisnap",
     services: health,
+    appWallet: process.env.XRPL_APP_WALLET_ADDRESS || null,
     timestamp: new Date().toISOString(),
   });
 }

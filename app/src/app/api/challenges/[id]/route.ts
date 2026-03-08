@@ -15,8 +15,8 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
 
   // Privacy guard: private challenges are not readable by non-owners
   // Exception: versus challenges are shareable (that's the point)
-  const isVersus = data.challenge_mode === "versus";
-  if (!isCreator && !isVersus && data.visibility === "private") {
+  const isShareable = data.challenge_mode === "versus" || data.challenge_mode === "bounty";
+  if (!isCreator && !isShareable && data.visibility === "private") {
     return NextResponse.json({ success: false, error: "Not authorized" }, { status: 403 });
   }
 
@@ -48,6 +48,13 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const allowed = ["ACCEPTED", "PROOF_SUBMITTED", "VERIFYING"];
     if (!allowed.includes(String(body.status ?? ""))) {
       return NextResponse.json({ success: false, error: "Not authorized" }, { status: 403 });
+    }
+  }
+
+  // Wallet gate: if challenge targets a specific wallet, only that wallet can accept
+  if (body.status === "ACCEPTED" && existing.opponent_address) {
+    if (body.acceptorAddress !== existing.opponent_address) {
+      return NextResponse.json({ success: false, error: "Wallet mismatch — this challenge targets a specific wallet" }, { status: 403 });
     }
   }
 

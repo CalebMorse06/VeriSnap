@@ -127,6 +127,37 @@ export async function cancelEscrow(
   return result.result.hash;
 }
 
+/**
+ * Send XRP payout from app wallet to winner after escrow settles.
+ * This is the real fund transfer — visible on the ledger.
+ */
+export async function sendPayout(
+  appWallet: Wallet,
+  destinationAddress: string,
+  amountXRP: number,
+  challengeId?: string
+): Promise<string> {
+  const xrplClient = await getClient();
+
+  const payment = {
+    TransactionType: "Payment" as const,
+    Account: appWallet.address,
+    Destination: destinationAddress,
+    Amount: xrpToDrops(amountXRP),
+    Memos: challengeId ? [{
+      Memo: {
+        MemoType: Buffer.from("verisnap/payout", "utf8").toString("hex").toUpperCase(),
+        MemoData: Buffer.from(challengeId, "utf8").toString("hex").toUpperCase(),
+      },
+    }] : undefined,
+  };
+
+  const prepared = await xrplClient.autofill(payment);
+  const signed = appWallet.sign(prepared);
+  const result = await xrplClient.submitAndWait(signed.tx_blob);
+  return result.result.hash;
+}
+
 export async function getBalance(address: string): Promise<string> {
   const xrplClient = await getClient();
   const response = await xrplClient.request({

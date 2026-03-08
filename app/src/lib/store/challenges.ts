@@ -12,7 +12,7 @@ export interface ChallengeData {
   stakeAmount: number; // in drops
   durationMinutes: number;
   creatorAddress: string;
-  challengeMode?: "self" | "versus";
+  challengeMode?: "self" | "versus" | "bounty";
   opponentAddress?: string;
   acceptorAddress?: string;
   status: "DRAFT" | "FUNDED" | "ACCEPTED" | "PROOF_SUBMITTED" | "VERIFYING" | "PASSED" | "FAILED" | "SETTLED" | "EXPIRED" | "DISPUTED";
@@ -145,12 +145,12 @@ export function updateChallenge(id: string, updates: Partial<ChallengeData>): Ch
   return updated;
 }
 
-export function createChallenge(data: Omit<ChallengeData, "id" | "status" | "createdAt" | "expiresAt" | "visibility"> & { challengeMode?: "self" | "versus" }): ChallengeData {
+export function createChallenge(data: Omit<ChallengeData, "id" | "status" | "createdAt" | "expiresAt" | "visibility"> & { challengeMode?: "self" | "versus" | "bounty" }): ChallengeData {
   const challenge: ChallengeData = {
     ...data,
     id: `challenge-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
     status: "FUNDED",
-    visibility: "private",
+    visibility: data.challengeMode === "bounty" ? "public" : "private",
     challengeMode: data.challengeMode || "versus",
     createdAt: Date.now(),
     expiresAt: Date.now() + 86400000, // 24 hours

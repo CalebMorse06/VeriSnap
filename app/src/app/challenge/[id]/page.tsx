@@ -3,12 +3,13 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { MapPin, Clock, ChevronLeft, User, Users, ExternalLink, ArrowRight, Timer, Camera, Copy, Check } from "lucide-react";
+import { MapPin, Clock, ChevronLeft, User, Users, Globe, Lock, ExternalLink, ArrowRight, Timer, Camera, Copy, Check, Link2, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TrustBadge, TrustPillars } from "@/components/ui/trust-badge";
 import { EscrowLockAnimation } from "@/components/animations/EscrowLockAnimation";
 import { MoneyFlowVisualization } from "@/components/animations/MoneyFlowVisualization";
 import { Skeleton } from "@/components/ui/skeleton";
+import { QRCodeSVG } from "qrcode.react";
 import Link from "next/link";
 import { getChallenge, updateChallenge, ChallengeData } from "@/lib/store/challenges";
 
@@ -21,6 +22,7 @@ export default function ChallengePage() {
   const [selfStarted, setSelfStarted] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [showQr, setShowQr] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -102,6 +104,7 @@ export default function ChallengePage() {
   };
 
   const isSelfChallenge = challenge?.challengeMode === "self";
+  const isBounty = challenge?.challengeMode === "bounty";
 
   if (loading) {
     return (
@@ -237,9 +240,10 @@ export default function ChallengePage() {
               href={`https://testnet.xrpl.org/transactions/${challenge.escrowTxHash}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-700 font-medium mt-3"
+              className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-xs text-emerald-700 hover:bg-emerald-100 font-medium transition-colors"
             >
-              View TX
+              <Link2 className="w-3.5 h-3.5" />
+              View on XRPL
               <ExternalLink className="w-3 h-3" />
             </a>
           </motion.section>
@@ -252,7 +256,24 @@ export default function ChallengePage() {
           transition={{ delay: 0.25 }}
           className="mb-6"
         >
-          {challenge.challengeMode === "versus" ? (
+          {challenge.challengeMode === "bounty" ? (
+            <div className="p-4 rounded-xl bg-amber-50 border border-amber-200">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                  <Globe className="w-5 h-5 text-amber-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium text-amber-900">Public Bounty</p>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-700 border border-amber-200">Open to all</span>
+                  </div>
+                  <p className="text-xs font-mono text-amber-700 truncate mt-0.5">
+                    Created by {challenge.creatorAddress}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : challenge.challengeMode === "versus" ? (
             <div className="flex items-center gap-2">
               {/* Challenger */}
               <div className="flex-1 p-3 rounded-xl bg-white border border-[var(--vs-border)] text-center">
@@ -276,10 +297,20 @@ export default function ChallengePage() {
                   <Users className="w-4 h-4 text-zinc-400" />
                 </div>
                 <p className="text-xs text-[var(--vs-text-tertiary)]">Opponent</p>
-                {challenge.opponentAddress || challenge.acceptorAddress ? (
+                {challenge.acceptorAddress ? (
                   <p className="text-xs font-mono text-[var(--vs-text-secondary)] truncate mt-0.5">
-                    {challenge.acceptorAddress || challenge.opponentAddress}
+                    {challenge.acceptorAddress}
                   </p>
+                ) : challenge.opponentAddress ? (
+                  <div className="mt-0.5">
+                    <div className="flex items-center justify-center gap-1 mb-1">
+                      <Lock className="w-3 h-3 text-amber-600" />
+                      <span className="text-[10px] font-medium text-amber-600">Wallet-gated</span>
+                    </div>
+                    <p className="text-xs font-mono text-[var(--vs-text-secondary)] truncate">
+                      {challenge.opponentAddress.slice(0, 6)}...{challenge.opponentAddress.slice(-4)}
+                    </p>
+                  </div>
                 ) : (
                   <div className="mt-0.5">
                     <img
@@ -321,6 +352,46 @@ export default function ChallengePage() {
             </div>
           )}
         </motion.section>
+
+        {/* QR Code — for versus/bounty challenges that are still open */}
+        {!isSelfChallenge && challenge.status === "FUNDED" && (
+          <motion.section
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.28 }}
+            className="mb-6"
+          >
+            <button
+              onClick={() => setShowQr(!showQr)}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-zinc-300 text-sm text-[var(--vs-text-secondary)] hover:border-zinc-400 hover:bg-zinc-50 transition-colors"
+            >
+              <QrCode className="w-4 h-4" />
+              {showQr ? "Hide QR Code" : "Show QR Code"}
+            </button>
+            {showQr && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                className="mt-3 flex flex-col items-center p-6 rounded-xl bg-white border border-[var(--vs-border)]"
+              >
+                <div className="bg-white p-3 rounded-xl">
+                  <QRCodeSVG
+                    value={typeof window !== "undefined"
+                      ? `${window.location.origin}/challenge/${challengeId}/accept`
+                      : `/challenge/${challengeId}/accept`}
+                    size={180}
+                    level="M"
+                    includeMargin={false}
+                  />
+                </div>
+                <p className="text-sm font-medium text-[var(--vs-text-primary)] mt-3">Scan to accept</p>
+                <p className="text-xs text-[var(--vs-text-tertiary)] mt-1">
+                  {isBounty ? "Anyone can scan and attempt this bounty" : "Share this with your opponent"}
+                </p>
+              </motion.div>
+            )}
+          </motion.section>
+        )}
 
         {/* Action button */}
         <motion.section
@@ -371,11 +442,24 @@ export default function ChallengePage() {
             <>
               <Button
                 size="lg"
-                className="w-full h-12 gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm"
+                className={`w-full h-12 gap-2 rounded-xl text-white font-medium shadow-sm ${
+                  isBounty
+                    ? "bg-amber-600 hover:bg-amber-700"
+                    : "bg-emerald-600 hover:bg-emerald-700"
+                }`}
                 onClick={() => router.push(`/challenge/${challengeId}/accept`)}
               >
-                Accept Challenge
-                <ArrowRight className="w-4 h-4" />
+                {isBounty ? (
+                  <>
+                    <Globe className="w-4 h-4" />
+                    Attempt Bounty
+                  </>
+                ) : (
+                  <>
+                    Accept Challenge
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
               </Button>
               <p className="text-center text-xs text-[var(--vs-text-tertiary)] mt-3">
                 {xrpAmount} XRP will be locked in XRPL escrow

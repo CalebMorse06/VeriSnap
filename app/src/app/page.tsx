@@ -22,6 +22,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { getChallenges } from "@/lib/store/challenges";
 import { ServiceStatus } from "@/components/status/ServiceStatus";
+import { WalletButton } from "@/components/wallet/WalletButton";
 
 function toUiChallenge(c: ReturnType<typeof getChallenges>[number]): Challenge {
   return {
@@ -32,6 +33,7 @@ function toUiChallenge(c: ReturnType<typeof getChallenges>[number]): Challenge {
     location: c.location,
     stakeAmount: c.stakeAmount,
     creatorAddress: c.creatorAddress,
+    challengeMode: c.challengeMode,
     status: c.status as ChallengeStatus,
     createdAt: new Date(c.createdAt),
     expiresAt: new Date(c.expiresAt),
@@ -58,6 +60,7 @@ export default function Home() {
             location: { name: c.location_name, lat: c.location_lat, lng: c.location_lng },
             stakeAmount: c.stake_amount_drops,
             creatorAddress: c.escrow_owner || c.creator_id,
+            challengeMode: c.challenge_mode as Challenge["challengeMode"],
             status: c.status as ChallengeStatus,
             createdAt: new Date(c.created_at as string),
             expiresAt: new Date(c.expires_at as string),
@@ -95,6 +98,7 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-2">
             <ServiceStatus compact />
+            <WalletButton />
             <Link href="/feed">
               <Button size="sm" variant="ghost" className="text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50">
                 <Globe className="w-4 h-4" />
@@ -387,6 +391,41 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Open Bounties */}
+      {challenges.filter(c => c.challengeMode === "bounty" && c.status === "FUNDED").length > 0 && (
+        <section className="border-t border-zinc-100 bg-amber-50/30">
+          <div className="max-w-xl mx-auto px-6 py-16">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2">
+                <Globe className="w-5 h-5 text-amber-600" />
+                <h2 className="text-xl font-bold text-zinc-900">Open Bounties</h2>
+              </div>
+              <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700 border border-amber-200">
+                {challenges.filter(c => c.challengeMode === "bounty" && c.status === "FUNDED").length} open
+              </span>
+            </div>
+            <div className="space-y-3">
+              {challenges
+                .filter(c => c.challengeMode === "bounty" && c.status === "FUNDED")
+                .map((challenge, index) => (
+                  <motion.div
+                    key={challenge.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <ChallengeCard
+                      challenge={challenge}
+                      onAccept={() => { window.location.href = `/challenge/${challenge.id}/accept`; }}
+                      onView={() => { window.location.href = `/challenge/${challenge.id}`; }}
+                    />
+                  </motion.div>
+                ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Active Challenges */}
       <section className="border-t border-zinc-100">

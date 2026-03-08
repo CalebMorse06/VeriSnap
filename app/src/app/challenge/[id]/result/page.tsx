@@ -3,7 +3,7 @@
 import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Home, ChevronLeft, ExternalLink, AlertTriangle, Eye, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Home, ChevronLeft, ExternalLink, AlertTriangle, Eye, ThumbsUp, ThumbsDown, Link2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TrustPillars } from "@/components/ui/trust-badge";
 import { ShareOptions } from "@/components/challenge/ShareOptions";
@@ -21,6 +21,7 @@ interface VerificationData {
   sceneDescription?: string;
   proofCid?: string;
   settlementTx?: string;
+  payoutTx?: string;
   settlementError?: string;
 }
 
@@ -127,6 +128,7 @@ export default function ResultPage() {
     : "Unable to verify the challenge objective in the submitted image.");
   const proofCid = verification?.proofCid ?? challenge?.proofCid;
   const settlementTx = verification?.settlementTx ?? challenge?.settlementTx;
+  const payoutTx = verification?.payoutTx;
   const stakeDrops = challenge?.stakeAmount ?? 20_000_000;
 
   return (
@@ -268,9 +270,10 @@ export default function ResultPage() {
                   href={`https://gateway.pinata.cloud/ipfs/${proofCid}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-emerald-600 hover:text-emerald-700 flex items-center gap-1 font-mono"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-50 border border-zinc-200 text-zinc-700 hover:bg-zinc-100 font-mono transition-colors"
                 >
-                  {proofCid.slice(0, 12)}...
+                  <Link2 className="w-3 h-3" />
+                  {proofCid.slice(0, 10)}...
                   <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
@@ -282,14 +285,133 @@ export default function ResultPage() {
                   href={`https://testnet.xrpl.org/transactions/${settlementTx}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-emerald-600 hover:text-emerald-700 flex items-center gap-1 font-mono"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 font-mono transition-colors"
                 >
-                  {settlementTx.slice(0, 12)}...
+                  <Link2 className="w-3 h-3" />
+                  View on XRPL
                   <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
             )}
           </div>
+        </motion.div>
+
+        {/* Transaction Trail */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: detailsVisible ? 1 : 0, y: detailsVisible ? 0 : 10 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="p-4 rounded-xl bg-white border border-[var(--vs-border)] mb-6"
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <Link2 className="w-4 h-4 text-emerald-600" />
+            <h3 className="text-sm font-medium text-[var(--vs-text-primary)]">Transaction Trail</h3>
+            <span className="text-[10px] text-[var(--vs-text-tertiary)] ml-auto">Verify on XRPL Ledger</span>
+          </div>
+          <div className="space-y-3">
+            {/* Escrow Created */}
+            <div className="flex items-center gap-3">
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
+                challenge?.escrowTxHash ? "bg-emerald-100" : "bg-zinc-100"
+              }`}>
+                <CheckCircle2 className={`w-4 h-4 ${challenge?.escrowTxHash ? "text-emerald-600" : "text-zinc-400"}`} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-[var(--vs-text-primary)]">Escrow Created</p>
+                {challenge?.escrowTxHash ? (
+                  <a
+                    href={`https://testnet.xrpl.org/transactions/${challenge.escrowTxHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] font-mono text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+                  >
+                    {challenge.escrowTxHash.slice(0, 16)}...
+                    <ExternalLink className="w-2.5 h-2.5" />
+                  </a>
+                ) : (
+                  <p className="text-[11px] text-[var(--vs-text-tertiary)]">Pending</p>
+                )}
+              </div>
+            </div>
+
+            {/* Proof Stored */}
+            <div className="flex items-center gap-3">
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
+                proofCid ? "bg-emerald-100" : "bg-zinc-100"
+              }`}>
+                <CheckCircle2 className={`w-4 h-4 ${proofCid ? "text-emerald-600" : "text-zinc-400"}`} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-[var(--vs-text-primary)]">Proof Stored (IPFS)</p>
+                {proofCid ? (
+                  <a
+                    href={`https://gateway.pinata.cloud/ipfs/${proofCid}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] font-mono text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+                  >
+                    {proofCid.slice(0, 16)}...
+                    <ExternalLink className="w-2.5 h-2.5" />
+                  </a>
+                ) : (
+                  <p className="text-[11px] text-[var(--vs-text-tertiary)]">No proof CID</p>
+                )}
+              </div>
+            </div>
+
+            {/* Settlement */}
+            <div className="flex items-center gap-3">
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
+                settlementTx ? "bg-emerald-100" : "bg-zinc-100"
+              }`}>
+                <CheckCircle2 className={`w-4 h-4 ${settlementTx ? "text-emerald-600" : "text-zinc-400"}`} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-[var(--vs-text-primary)]">Escrow Released</p>
+                {settlementTx ? (
+                  <a
+                    href={`https://testnet.xrpl.org/transactions/${settlementTx}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] font-mono text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+                  >
+                    {settlementTx.slice(0, 16)}...
+                    <ExternalLink className="w-2.5 h-2.5" />
+                  </a>
+                ) : (
+                  <p className="text-[11px] text-[var(--vs-text-tertiary)]">Pending</p>
+                )}
+              </div>
+            </div>
+
+            {/* Payout to winner */}
+            <div className="flex items-center gap-3">
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
+                payoutTx ? "bg-emerald-100" : "bg-zinc-100"
+              }`}>
+                <CheckCircle2 className={`w-4 h-4 ${payoutTx ? "text-emerald-600" : "text-zinc-400"}`} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-[var(--vs-text-primary)]">Payout Sent</p>
+                {payoutTx ? (
+                  <a
+                    href={`https://testnet.xrpl.org/transactions/${payoutTx}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] font-mono text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+                  >
+                    {payoutTx.slice(0, 16)}...
+                    <ExternalLink className="w-2.5 h-2.5" />
+                  </a>
+                ) : (
+                  <p className="text-[11px] text-[var(--vs-text-tertiary)]">{passed ? "Pending" : "N/A"}</p>
+                )}
+              </div>
+            </div>
+          </div>
+          <p className="text-[10px] text-[var(--vs-text-tertiary)] mt-3 pt-2 border-t border-[var(--vs-border-subtle)]">
+            Challenge ID embedded in XRPL memo field
+          </p>
         </motion.div>
 
         {/* Share options */}
