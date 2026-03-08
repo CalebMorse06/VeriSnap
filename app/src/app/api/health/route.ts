@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
-import { getRuntimeConfig } from "@/lib/env";
+import { checkServiceHealth } from "@/lib/service-health";
 
 export async function GET() {
-  const cfg = getRuntimeConfig();
+  const health = await checkServiceHealth();
+  const allOk = health.xrpl.ok && health.pinata.ok && health.gemini.ok && health.supabase.ok;
+
   return NextResponse.json({
-    ok: cfg.pinataConfigured && cfg.geminiConfigured && cfg.xrplConfigured && cfg.supabaseConfigured,
+    ok: allOk,
     service: "verisnap",
-    ...cfg,
+    services: health,
     timestamp: new Date().toISOString(),
   });
 }

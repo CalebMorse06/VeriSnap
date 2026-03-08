@@ -3,36 +3,80 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Clock, MapPin, Camera, CheckCircle2, AlertTriangle, ChevronLeft } from "lucide-react";
+import { Clock, MapPin, Camera, CheckCircle2, AlertTriangle, ChevronLeft, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TrustBadge, TrustPillars } from "@/components/ui/trust-badge";
-import { getChallenge, updateChallenge, ChallengeData } from "@/lib/store/challenges";
+import { EscrowLockAnimation } from "@/components/animations/EscrowLockAnimation";
+import { MoneyFlowVisualization } from "@/components/animations/MoneyFlowVisualization";
+import { getChallenge, saveChallenge, updateChallenge, ChallengeData } from "@/lib/store/challenges";
+import { useWallet } from "@/lib/wallet-context";
 import Link from "next/link";
 
-const FALLBACK: ChallengeData = {
-  id: "campanile-1",
-  title: "Visit the KU Campanile",
-  description: "Prove you're at the iconic KU Campanile tower",
-  objective: "Take a clear photo showing the KU Campanile bell tower",
-  location: { name: "KU Campanile, Lawrence, KS", lat: 0, lng: 0 },
-  stakeAmount: 20_000_000,
-  durationMinutes: 20,
-  creatorAddress: "rDemo",
-  status: "FUNDED",
-  visibility: "private",
-  createdAt: Date.now(),
-  expiresAt: Date.now() + 86400000,
-};
+import { Skeleton } from "@/components/ui/skeleton";
+
+function mapServerChallenge(c: Record<string, unknown>): ChallengeData {
+  return {
+    id: String(c.id),
+    title: String(c.title),
+    description: String(c.description),
+    objective: String(c.objective),
+    location: { name: String(c.location_name), lat: Number(c.location_lat), lng: Number(c.location_lng) },
+    stakeAmount: Number(c.stake_amount_drops),
+    durationMinutes: Number(c.duration_minutes),
+    creatorAddress: String(c.escrow_owner || c.creator_id),
+    status: String(c.status) as ChallengeData["status"],
+    visibility: (String(c.visibility) || "private") as ChallengeData["visibility"],
+    createdAt: new Date(String(c.created_at)).getTime(),
+    expiresAt: new Date(String(c.expires_at)).getTime(),
+    escrowTxHash: c.escrow_tx_hash ? String(c.escrow_tx_hash) : undefined,
+    escrowSequence: c.escrow_sequence ? Number(c.escrow_sequence) : undefined,
+    escrowOwner: c.escrow_owner ? String(c.escrow_owner) : undefined,
+    challengeMode: (c.challenge_mode as "self" | "versus") || undefined,
+    opponentAddress: c.opponent_address ? String(c.opponent_address) : undefined,
+    acceptorAddress: c.acceptor_address ? String(c.acceptor_address) : undefined,
+  };
+}
 
 export default function AcceptChallengePage() {
   const params = useParams();
   const router = useRouter();
+  const wallet = useWallet();
   const id = params.id as string;
-  const challenge = getChallenge(id) || FALLBACK;
 
+  const [challenge, setChallenge] = useState<ChallengeData | null>(null);
+  const [loading, setLoading] = useState(true);
   const [accepted, setAccepted] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState(challenge.durationMinutes * 60);
+  const [escrowState, setEscrowState] = useState<"idle" | "funding" | "locked">("idle");
+  const [timeRemaining, setTimeRemaining] = useState(0);
   const [isExpired, setIsExpired] = useState(false);
+
+  // Fetch challenge from server, fall back to local
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await fetch(`/api/challenges/${id}`, { cache: "no-store" });
+        const json = await res.json();
+        if (mounted && json.success && json.challenge) {
+          const c = mapServerChallenge(json.challenge);
+          setChallenge(c);
+          saveChallenge(c);
+          setTimeRemaining(c.durationMinutes * 60);
+          setLoading(false);
+          return;
+        }
+      } catch (err) { console.warn("[AcceptPage] Server fetch failed:", err); }
+      if (mounted) {
+        const stored = getChallenge(id);
+        if (stored) {
+          setChallenge(stored);
+          setTimeRemaining(stored.durationMinutes * 60);
+        }
+        setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [id]);
 
   useEffect(() => {
     if (!accepted) return;
@@ -50,15 +94,22 @@ export default function AcceptChallengePage() {
   }, [accepted]);
 
   const handleAccept = () => {
-    setAccepted(true);
-    const acceptedAt = Date.now();
-    const expiresAt = acceptedAt + challenge.durationMinutes * 60 * 1000;
-
-    sessionStorage.setItem(
-      "challengeAccepted",
-      JSON.stringify({ challengeId: id, acceptedAt, expiresAt })
-    );
-    updateChallenge(id, { status: "ACCEPTED", acceptedAt });
+    if (!challenge) return;
+    setEscrowState("funding");
+    setTimeout(() => {
+      setEscrowState("locked");
+    }, 1200);
+    setTimeout(() => {
+      setAccepted(true);
+      const acceptedAt = Date.now();
+      const expiresAt = acceptedAt + challenge.durationMinutes * 60 * 1000;
+      sessionStorage.setItem(
+        "challengeAccepted",
+        JSON.stringify({ challengeId: id, acceptedAt, expiresAt })
+      );
+      updateChallenge(id, { status: "ACCEPTED", acceptedAt, acceptorAddress: wallet.address || "rAcceptorDemo" });
+      setTimeRemaining(challenge.durationMinutes * 60);
+    }, 2500);
   };
 
   const formatTime = (seconds: number) => {
@@ -67,8 +118,36 @@ export default function AcceptChallengePage() {
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const xrpAmount = challenge.stakeAmount / 1_000_000;
-  const progress = (timeRemaining / (challenge.durationMinutes * 60)) * 100;
+  const xrpAmount = challenge ? challenge.stakeAmount / 1_000_000 : 0;
+  const progress = challenge ? (timeRemaining / (challenge.durationMinutes * 60)) * 100 : 0;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[var(--vs-bg-primary)]">
+        <header className="bg-white border-b border-[var(--vs-border)] p-4">
+          <Skeleton className="h-6 w-32" />
+        </header>
+        <div className="max-w-xl mx-auto px-4 py-6 space-y-4">
+          <Skeleton className="h-8 w-3/4" />
+          <Skeleton className="h-32 w-full rounded-xl" />
+          <Skeleton className="h-12 w-full rounded-lg" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!challenge) {
+    return (
+      <div className="min-h-screen bg-[var(--vs-bg-primary)] flex items-center justify-center p-6">
+        <div className="text-center">
+          <h2 className="text-lg font-medium text-[var(--vs-text-primary)]">Challenge not found</h2>
+          <Link href="/">
+            <Button className="mt-4 bg-emerald-600 hover:bg-emerald-700">Go Home</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   // Pre-accept state
   if (!accepted) {
@@ -76,7 +155,7 @@ export default function AcceptChallengePage() {
       <div className="min-h-screen bg-[var(--vs-bg-primary)]">
         {/* Header */}
         <header className="bg-white border-b border-[var(--vs-border)] sticky top-0 z-50">
-          <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
+          <div className="max-w-xl mx-auto px-4 py-3 flex items-center gap-3">
             <Link href={`/challenge/${id}`}>
               <Button variant="ghost" size="icon" className="text-[var(--vs-text-secondary)] hover:text-[var(--vs-text-primary)] hover:bg-zinc-100 -ml-2">
                 <ChevronLeft className="w-5 h-5" />
@@ -89,7 +168,22 @@ export default function AcceptChallengePage() {
           </div>
         </header>
 
-        <main className="max-w-lg mx-auto px-4 py-6">
+        <main className="max-w-xl mx-auto px-4 py-6">
+          {/* Challenger banner */}
+          {challenge.creatorAddress && challenge.creatorAddress !== "rDemo" && (
+            <section className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                  <User className="w-4 h-4 text-emerald-600" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-emerald-700">You were challenged by</p>
+                  <p className="text-sm font-mono text-emerald-900 truncate">{challenge.creatorAddress}</p>
+                </div>
+              </div>
+            </section>
+          )}
+
           {/* Challenge details */}
           <section className="mb-6 p-5 rounded-xl bg-white border border-[var(--vs-border)]">
             <h2 className="text-lg font-semibold text-[var(--vs-text-primary)] mb-1">{challenge.title}</h2>
@@ -136,9 +230,29 @@ export default function AcceptChallengePage() {
             </div>
           </section>
 
-          {/* Escrow badge */}
-          <section className="mb-6 flex justify-center">
-            <TrustBadge variant="escrow" size="md" />
+          {/* Wallet-identity framing */}
+          <section className="mb-6">
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-zinc-50 border border-zinc-200">
+              <img
+                src="/illustrations/accept-challenge.jpg"
+                alt="Trustless agreement"
+                className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
+                draggable={false}
+              />
+              <p className="text-xs text-[var(--vs-text-secondary)]">
+                No sign-up required — secured by XRPL escrow, not accounts.
+              </p>
+            </div>
+          </section>
+
+          {/* Money flow animation */}
+          <section className="mb-6">
+            <MoneyFlowVisualization
+              flowState={escrowState === "idle" ? "idle" : escrowState === "funding" ? "funding" : "locked"}
+              amountXrp={xrpAmount}
+              creatorAddress={challenge.creatorAddress}
+              compact
+            />
           </section>
 
           {/* Accept button */}
@@ -165,7 +279,7 @@ export default function AcceptChallengePage() {
     <div className="min-h-screen bg-[var(--vs-bg-primary)] flex flex-col">
       {/* Timer bar */}
       <div className={`py-4 px-4 ${isExpired ? "bg-red-500" : timeRemaining < 60 ? "bg-amber-500" : "bg-emerald-600"}`}>
-        <div className="max-w-lg mx-auto">
+        <div className="max-w-xl mx-auto">
           <div className="flex items-center justify-between text-white mb-2">
             <span className="text-sm font-medium">
               {isExpired ? "Time expired" : timeRemaining < 60 ? "Hurry!" : "Time remaining"}
@@ -184,7 +298,7 @@ export default function AcceptChallengePage() {
       </div>
 
       {/* Content */}
-      <main className="flex-1 max-w-lg mx-auto px-4 py-8 w-full">
+      <main className="flex-1 max-w-xl mx-auto px-4 py-8 w-full">
         <div className="text-center mb-8">
           <h1 className="text-xl font-semibold text-[var(--vs-text-primary)] mb-2">{challenge.title}</h1>
           <p className="text-sm text-[var(--vs-text-secondary)]">{challenge.objective}</p>

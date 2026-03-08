@@ -38,6 +38,7 @@ export const viewport: Viewport = {
 
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { DemoBanner } from "@/components/demo/DemoBanner";
+import { ClientProviders } from "@/components/providers/ClientProviders";
 
 export default function RootLayout({
   children,
@@ -49,9 +50,11 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <DemoBanner />
-        {children}
-        <InstallPrompt />
+        <ClientProviders>
+          <DemoBanner />
+          {children}
+          <InstallPrompt />
+        </ClientProviders>
       </body>
     </html>
   );

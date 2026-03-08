@@ -83,6 +83,9 @@ export async function POST(request: NextRequest) {
     escrow_sequence: body.escrowSequence ?? null,
     escrow_tx_hash: body.escrowTxHash ?? null,
     escrow_owner: body.escrowOwner ?? null,
+    challenge_mode: body.challengeMode ?? "self",
+    opponent_address: body.opponentAddress ?? null,
+    acceptor_address: body.acceptorAddress ?? null,
   };
 
   const { data, error } = await supabase.from("challenges").insert(row).select("*").single();

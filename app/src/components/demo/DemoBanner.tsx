@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { AlertCircle, X } from "lucide-react";
+import { X } from "lucide-react";
+import { WalletButton } from "@/components/wallet/WalletButton";
+import { SyncIndicator } from "@/components/status/SyncIndicator";
 
 /**
- * Demo mode banner - shows at top of page to indicate testnet
+ * Professional testnet indicator bar
  */
 export function DemoBanner() {
   const [dismissed, setDismissed] = useState(false);
@@ -12,21 +14,28 @@ export function DemoBanner() {
   if (dismissed) return null;
 
   return (
-    <div className="bg-amber-50 border-b border-amber-200 px-4 py-2">
-      <div className="max-w-lg mx-auto flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-amber-800">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          <p className="text-xs">
-            <span className="font-medium">Demo Mode</span>
-            <span className="hidden sm:inline"> — Using XRPL Testnet. No real XRP transferred.</span>
+    <div className="bg-zinc-900 border-b border-zinc-800 px-4 py-2">
+      <div className="max-w-xl mx-auto flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-white">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+          </span>
+          <p className="text-xs font-medium">
+            XRPL Testnet
+            <span className="hidden sm:inline text-zinc-400 font-normal"> — Real transactions, test currency</span>
           </p>
+          <SyncIndicator />
         </div>
-        <button
-          onClick={() => setDismissed(true)}
-          className="text-amber-600 hover:text-amber-800 p-1"
-        >
-          <X className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-2">
+          <WalletButton />
+          <button
+            onClick={() => setDismissed(true)}
+            className="text-zinc-500 hover:text-zinc-300 p-1"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </div>
   );

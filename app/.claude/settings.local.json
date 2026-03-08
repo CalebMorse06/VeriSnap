@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx next:*)",
+      "Bash(grep:*)",
+      "Bash(xargs ls:*)",
+      "Bash(npx tsc:*)",
+      "Bash(pnpm build:*)",
+      "Bash(then echo:*)",
+      "Bash(curl:*)",
+      "Bash(netstat:*)",
+      "Bash(tasklist:*)",
+      "Bash(taskkill:*)",
+      "Bash(pnpm dev:*)",
+      "Bash(wmic process:*)",
+      "Bash(powershell:*)",
+      "Bash(cp:*)",
+      "WebFetch(domain:localhost)",
+      "Bash(git:*)"
+    ]
+  }
+}

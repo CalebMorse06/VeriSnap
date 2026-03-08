@@ -14,7 +14,9 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
   const isCreator = data.creator_id === uid;
 
   // Privacy guard: private challenges are not readable by non-owners
-  if (!isCreator && data.visibility === "private") {
+  // Exception: versus challenges are shareable (that's the point)
+  const isVersus = data.challenge_mode === "versus";
+  if (!isCreator && !isVersus && data.visibility === "private") {
     return NextResponse.json({ success: false, error: "Not authorized" }, { status: 403 });
   }
 
@@ -65,6 +67,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (body.resolvedAt !== undefined) updates.resolved_at = new Date(body.resolvedAt).toISOString();
   if (body.visibility !== undefined) updates.visibility = body.visibility;
   if (body.proofRevealed !== undefined) updates.proof_revealed = Boolean(body.proofRevealed);
+  if (body.acceptorAddress !== undefined) updates.acceptor_address = body.acceptorAddress;
+  if (body.opponentAddress !== undefined) updates.opponent_address = body.opponentAddress;
+  if (body.challengeMode !== undefined) updates.challenge_mode = body.challengeMode;
 
   const { data, error } = await supabase.from("challenges").update(updates).eq("id", id).select("*").single();
   if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 });

@@ -13,6 +13,8 @@ export const createChallengeSchema = z.object({
   durationMinutes: z.number().int().min(1).max(24 * 60),
 });
 
+export const expandTitleSchema = z.object({ title: z.string().min(3).max(200) });
+
 export const verifySchema = z.object({
   challengeId: z.string().min(1),
   imageData: z.string().min(100),

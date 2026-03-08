@@ -6,6 +6,7 @@ export interface VerificationResult {
   passed: boolean;
   confidence: number; // 0-100
   reasoning: string;
+  sceneDescription: string;
   fraudIndicators?: string[];
   objectiveMatches?: string[];
 }
@@ -26,7 +27,7 @@ export async function verifyProof(
     },
   });
 
-  const prompt = `You are a verification AI for VeriSnap, an app where users stake real money on completing challenges and submit photo proof.
+  const prompt = `You are a verification AI for VeriSnap, a challenge app where users stake XRP on completing objectives and submit photo proof.
 
 ## CHALLENGE OBJECTIVE
 ${challengeObjective}
@@ -34,30 +35,24 @@ ${challengeObjective}
 ${challengeContext ? `## ADDITIONAL CONTEXT\n${challengeContext}\n` : ""}
 
 ## YOUR TASK
-Analyze the submitted photo and determine if the user has GENUINELY completed the challenge objective.
+Analyze the submitted photo and determine if the user has reasonably completed the challenge objective.
 
-## VERIFICATION CHECKLIST
-1. **Objective Match**: Are the key elements of the objective clearly visible?
-2. **Authenticity**: Does this appear to be a live, in-person photo?
-3. **Recency**: Does the photo appear to be taken recently (not an old photo)?
-4. **No Manipulation**: Check for signs of editing, screenshots, or photos-of-photos
-5. **No Deception**: Check for printouts, screens showing images, or other tricks
+You are verifying for a fun challenge app, not a court of law. If the user appears to be genuinely attempting the challenge, lean toward passing.
 
-## FRAUD DETECTION
-Watch for these red flags:
-- Visible screen bezels or pixels (photo of a screen)
-- Unnatural lighting suggesting indoor photo of outdoor scene
-- Compression artifacts from re-photographing
-- Visible paper edges (printed photo)
-- Inconsistent shadows or reflections
-- Stock photo watermarks or signatures
+## VERIFICATION APPROACH
+1. **Objective Match**: Are the key elements of the objective visible or reasonably implied?
+2. **Good Faith**: Does this look like a genuine attempt at the challenge?
+3. **Basic Authenticity**: No obvious screenshots, stock photos, or printed images
 
 ## DECISION RULES
-- PASS: Objective clearly met, photo appears authentic, no fraud indicators
-- FAIL: Objective not met OR fraud indicators detected
-- Confidence should reflect certainty (80+ for clear cases, 50-80 for uncertain)
+- PASS: Photo reasonably shows the user completing the objective. If the core activity is visible, pass it. Benefit of the doubt.
+- FAIL: Objective clearly NOT met (wrong subject entirely, blank photo, obvious fraud like stock photos or screenshots)
+- Confidence should reflect certainty (70+ for reasonable matches, 50-70 for borderline)
 
-Analyze carefully. Real money is at stake.`;
+## SCENE DESCRIPTION
+You MUST also describe what you see in the photo in 1-2 sentences. Be specific about objects, people, and actions visible.
+
+Respond with JSON: {"passed": boolean, "confidence": number, "reasoning": string, "sceneDescription": string, "fraudIndicators": string[], "objectiveMatches": string[]}`;
 
   // Convert base64 to inline data
   const base64Data = imageData.replace(/^data:image\/\w+;base64,/, "");
@@ -80,6 +75,7 @@ Analyze carefully. Real money is at stake.`;
       passed: Boolean(parsed.passed),
       confidence: Math.min(100, Math.max(0, Number(parsed.confidence) || 0)),
       reasoning: String(parsed.reasoning || ""),
+      sceneDescription: String(parsed.sceneDescription || ""),
       fraudIndicators: Array.isArray(parsed.fraudIndicators) ? parsed.fraudIndicators : [],
       objectiveMatches: Array.isArray(parsed.objectiveMatches) ? parsed.objectiveMatches : [],
     };
@@ -101,14 +97,73 @@ Analyze carefully. Real money is at stake.`;
           passed: Boolean(parsed.passed),
           confidence: Number(parsed.confidence) || 0,
           reasoning: String(parsed.reasoning || ""),
+          sceneDescription: String(parsed.sceneDescription || ""),
         };
       }
-    } catch {}
+    } catch (err) { console.warn("[Gemini] Fallback parse failed:", err); }
 
     return {
       passed: false,
       confidence: 0,
       reasoning: "Verification system error - please retry",
+      sceneDescription: "",
+    };
+  }
+}
+
+/**
+ * Expand a challenge title into full description, objective, stake, and duration
+ * Privacy-preserving: only the title string is sent — no wallet, IP, or metadata
+ */
+export async function expandTitle(title: string): Promise<{
+  description: string;
+  objective: string;
+  suggestedStakeXrp: number;
+  suggestedDurationMinutes: number;
+}> {
+  const model = genAI.getGenerativeModel({
+    model: "gemini-2.0-flash",
+    generationConfig: {
+      responseMimeType: "application/json",
+    },
+  });
+
+  const prompt = `You are VeriSnap's challenge builder AI. Given a short challenge title, generate a complete challenge definition.
+
+## TITLE
+"${title}"
+
+## GENERATE
+1. **description**: A 1-2 sentence description of the challenge (fun, motivating tone)
+2. **objective**: What the photo proof must show (specific, verifiable visual criteria)
+3. **suggestedStakeXrp**: Reasonable XRP stake amount (integer, 1-100 range, based on difficulty)
+4. **suggestedDurationMinutes**: Time limit in minutes (5-120, based on complexity)
+
+## RULES
+- Keep descriptions concise and action-oriented
+- Objectives must be visually verifiable from a single photo
+- Stakes should match difficulty (easy=5, medium=10-20, hard=50+)
+- Duration should be realistic for the activity
+
+Respond with JSON: {"description": string, "objective": string, "suggestedStakeXrp": number, "suggestedDurationMinutes": number}`;
+
+  try {
+    const result = await model.generateContent(prompt);
+    const parsed = JSON.parse(result.response.text());
+
+    return {
+      description: String(parsed.description || ""),
+      objective: String(parsed.objective || ""),
+      suggestedStakeXrp: Math.min(100, Math.max(1, Number(parsed.suggestedStakeXrp) || 10)),
+      suggestedDurationMinutes: Math.min(120, Math.max(5, Number(parsed.suggestedDurationMinutes) || 20)),
+    };
+  } catch (e) {
+    console.error("Gemini expand error:", e);
+    return {
+      description: `Complete the "${title}" challenge and submit photo proof.`,
+      objective: `Take a clear photo proving you completed: ${title}`,
+      suggestedStakeXrp: 10,
+      suggestedDurationMinutes: 20,
     };
   }
 }

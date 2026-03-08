@@ -16,17 +16,16 @@ export function ChallengeCard({ challenge, onAccept, onView }: ChallengeCardProp
   const isActive = challenge.status === "ACCEPTED" || challenge.status === "PROOF_SUBMITTED" || challenge.status === "VERIFYING";
   const isComplete = challenge.status === "PASSED" || challenge.status === "FAILED" || challenge.status === "SETTLED";
 
-  // Premium status indicators - subtle, not flashy
-  const statusConfig: Record<string, { label: string; dotColor: string; textColor: string }> = {
-    FUNDED: { label: "Open", dotColor: "bg-emerald-500", textColor: "text-emerald-700" },
-    DRAFT: { label: "Draft", dotColor: "bg-zinc-400", textColor: "text-zinc-500" },
-    ACCEPTED: { label: "In Progress", dotColor: "bg-amber-500", textColor: "text-amber-700" },
-    PROOF_SUBMITTED: { label: "Verifying", dotColor: "bg-amber-500", textColor: "text-amber-700" },
-    VERIFYING: { label: "Verifying", dotColor: "bg-amber-500", textColor: "text-amber-700" },
-    PASSED: { label: "Passed", dotColor: "bg-green-500", textColor: "text-green-700" },
-    FAILED: { label: "Failed", dotColor: "bg-red-500", textColor: "text-red-700" },
-    SETTLED: { label: "Settled", dotColor: "bg-emerald-500", textColor: "text-emerald-700" },
-    EXPIRED: { label: "Expired", dotColor: "bg-zinc-400", textColor: "text-zinc-500" },
+  const statusConfig: Record<string, { label: string; bg: string; text: string }> = {
+    FUNDED: { label: "Open", bg: "bg-emerald-100", text: "text-emerald-700" },
+    DRAFT: { label: "Draft", bg: "bg-zinc-100", text: "text-zinc-600" },
+    ACCEPTED: { label: "In Progress", bg: "bg-amber-100", text: "text-amber-700" },
+    PROOF_SUBMITTED: { label: "Verifying", bg: "bg-amber-100", text: "text-amber-700" },
+    VERIFYING: { label: "Verifying", bg: "bg-amber-100", text: "text-amber-700" },
+    PASSED: { label: "Passed", bg: "bg-green-100", text: "text-green-700" },
+    FAILED: { label: "Failed", bg: "bg-red-100", text: "text-red-700" },
+    SETTLED: { label: "Settled", bg: "bg-emerald-100", text: "text-emerald-700" },
+    EXPIRED: { label: "Expired", bg: "bg-zinc-100", text: "text-zinc-600" },
   };
 
   const status = statusConfig[challenge.status] ?? statusConfig.FUNDED;
@@ -39,45 +38,42 @@ export function ChallengeCard({ challenge, onAccept, onView }: ChallengeCardProp
       className="bg-white rounded-xl border border-[var(--vs-border)] overflow-hidden transition-shadow hover:shadow-md"
     >
       <div className="p-4">
-        {/* Top row - status + stake */}
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <span className={`w-1.5 h-1.5 rounded-full ${status.dotColor}`} />
-            <span className={`text-xs font-medium ${status.textColor}`}>{status.label}</span>
-          </div>
-          <div className="text-right">
-            <span className="text-base font-semibold text-[var(--vs-text-primary)]">{stakeXrp}</span>
-            <span className="text-xs text-[var(--vs-text-tertiary)] ml-1">XRP</span>
-          </div>
+        {/* Top row - title + badge */}
+        <div className="flex items-center gap-2 mb-2">
+          <h3 className="text-base font-semibold text-[var(--vs-text-primary)] leading-tight flex-1 min-w-0 truncate">
+            {challenge.title}
+          </h3>
+          <span className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${status.bg} ${status.text}`}>
+            {status.label}
+          </span>
         </div>
 
-        {/* Title */}
-        <h3 className="text-base font-semibold text-[var(--vs-text-primary)] mb-1 leading-tight">
-          {challenge.title}
-        </h3>
+        {/* Middle - stake + timer */}
+        <div className="flex items-baseline gap-3 mb-2">
+          <div>
+            <span className="text-xl font-semibold text-[var(--vs-text-primary)]">{stakeXrp}</span>
+            <span className="text-sm text-[var(--vs-text-tertiary)] ml-1">XRP</span>
+          </div>
+          {challenge.expiresAt && (
+            <span className="flex items-center gap-1 text-xs text-[var(--vs-text-tertiary)]">
+              <Clock className="w-3 h-3" />
+              {formatRelativeTime(challenge.expiresAt)}
+            </span>
+          )}
+        </div>
 
         {/* Meta row */}
         <div className="flex items-center gap-3 text-xs text-[var(--vs-text-tertiary)] mb-3">
           {challenge.location?.name && (
             <div className="flex items-center gap-1">
               <MapPin className="w-3 h-3" />
-              <span className="truncate max-w-[120px]">{challenge.location.name.split(",")[0]}</span>
+              <span className="truncate max-w-[140px]">{challenge.location.name.split(",")[0]}</span>
             </div>
           )}
-          {challenge.expiresAt && (
-            <div className="flex items-center gap-1">
-              <Clock className="w-3 h-3" />
-              <span>{formatRelativeTime(challenge.expiresAt)}</span>
-            </div>
+          {challenge.xrpTxHash && (
+            <TrustBadge variant="escrow" size="sm" animated={false} />
           )}
         </div>
-
-        {/* Badge */}
-        {challenge.xrpTxHash && (
-          <div className="mb-3">
-            <TrustBadge variant="escrow" size="sm" animated={false} />
-          </div>
-        )}
 
         {/* Action button */}
         {isLive && (

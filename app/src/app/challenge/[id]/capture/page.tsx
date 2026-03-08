@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, RefreshCw, X, Clock, AlertCircle, ArrowRight, Lock } from "lucide-react";
-import { updateChallenge, getChallenge } from "@/lib/store/challenges";
+import { updateChallenge, getChallenge, saveChallenge, ChallengeData } from "@/lib/store/challenges";
 import { TrustBadge } from "@/components/ui/trust-badge";
 import { Button } from "@/components/ui/button";
 import { validateProofImage } from "@/lib/proof-validation";
@@ -15,8 +15,36 @@ export default function CapturePage() {
   const params = useParams();
   const router = useRouter();
   const challengeId = params.id as string;
-  const challenge = getChallenge(challengeId);
-  
+  const [challenge, setChallenge] = useState<ChallengeData | null>(getChallenge(challengeId));
+
+  // Fetch from server if not in local storage (cross-device)
+  useEffect(() => {
+    if (challenge) return;
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await fetch(`/api/challenges/${challengeId}`, { cache: "no-store" });
+        const json = await res.json();
+        if (mounted && json.success && json.challenge) {
+          const c = json.challenge;
+          const mapped: ChallengeData = {
+            id: c.id, title: c.title, description: c.description, objective: c.objective,
+            location: { name: c.location_name, lat: c.location_lat, lng: c.location_lng },
+            stakeAmount: c.stake_amount_drops, durationMinutes: c.duration_minutes,
+            creatorAddress: c.escrow_owner || c.creator_id, status: c.status,
+            visibility: c.visibility || "private", createdAt: new Date(c.created_at).getTime(),
+            expiresAt: new Date(c.expires_at).getTime(),
+            escrowTxHash: c.escrow_tx_hash || undefined, escrowSequence: c.escrow_sequence || undefined,
+            escrowOwner: c.escrow_owner || undefined,
+          };
+          setChallenge(mapped);
+          saveChallenge(mapped);
+        }
+      } catch (err) { console.warn("[CapturePage] Server fetch failed:", err); }
+    })();
+    return () => { mounted = false; };
+  }, [challenge, challengeId]);
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -250,7 +278,12 @@ export default function CapturePage() {
         {state === "initializing" && (
           <div className="absolute inset-0 flex items-center justify-center bg-zinc-900">
             <div className="text-center">
-              <Camera className="w-10 h-10 text-zinc-500 mx-auto mb-3 animate-pulse" />
+              <img
+                src="/illustrations/camera-viewfinder.jpg"
+                alt="Initializing camera"
+                className="w-24 h-24 mx-auto mb-3 rounded-xl opacity-60 animate-pulse object-contain"
+                draggable={false}
+              />
               <p className="text-zinc-400 text-sm">Starting camera...</p>
             </div>
           </div>
@@ -313,8 +346,8 @@ export default function CapturePage() {
               <div className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 border-white rounded-bl-lg" />
               <div className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-white rounded-br-lg" />
             </div>
-            <div className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-zinc-900/80 backdrop-blur-sm px-4 py-2 rounded-lg">
-              <p className="text-white text-sm">
+            <div className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-zinc-900/80 backdrop-blur-sm px-4 py-2 rounded-lg max-w-xl">
+              <p className="text-white text-base font-medium">
                 {challenge?.objective || "Frame your proof clearly"}
               </p>
             </div>

@@ -125,3 +125,11 @@ export const fontWeights = {
   semibold: "600",
   bold: "700",
 } as const;
+
+export const animation = {
+  fast: "150ms",
+  normal: "300ms",
+  slow: "600ms",
+  spring: { type: "spring" as const, stiffness: 400, damping: 25 },
+  springBouncy: { type: "spring" as const, stiffness: 300, damping: 15 },
+} as const;

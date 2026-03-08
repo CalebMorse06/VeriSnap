@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ChevronLeft, CheckCircle2, XCircle, ExternalLink, Clock, Activity } from "lucide-react";
+import { ChevronLeft, CheckCircle2, XCircle, ExternalLink, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TrustBadge, TrustPillars } from "@/components/ui/trust-badge";
@@ -51,7 +51,7 @@ export default function FeedPage() {
     <div className="min-h-screen bg-[var(--vs-bg-primary)]">
       {/* Header */}
       <header className="bg-white border-b border-[var(--vs-border)] sticky top-0 z-40">
-        <div className="max-w-lg mx-auto px-4 py-3">
+        <div className="max-w-xl mx-auto px-4 py-3">
           <div className="flex items-center gap-3">
             <Link href="/">
               <Button variant="ghost" size="icon" className="text-[var(--vs-text-secondary)] hover:text-[var(--vs-text-primary)] hover:bg-zinc-100 -ml-2">
@@ -66,7 +66,7 @@ export default function FeedPage() {
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto px-4 py-6">
+      <main className="max-w-xl mx-auto px-4 py-6">
         {/* Loading */}
         {loading && (
           <div className="space-y-4">
@@ -95,9 +95,12 @@ export default function FeedPage() {
         {/* Empty state */}
         {!loading && !error && feed.length === 0 && (
           <div className="text-center py-16">
-            <div className="w-14 h-14 rounded-full bg-zinc-100 flex items-center justify-center mx-auto mb-4">
-              <Activity className="w-6 h-6 text-zinc-400" />
-            </div>
+            <img
+              src="/illustrations/feed-empty-state.jpg"
+              alt="No public challenges yet"
+              className="w-32 h-32 mx-auto mb-4 object-contain opacity-80"
+              draggable={false}
+            />
             <h2 className="text-base font-medium text-[var(--vs-text-primary)] mb-2">No public challenges yet</h2>
             <p className="text-[var(--vs-text-secondary)] text-sm mb-6">
               Completed challenges will appear here when creators choose to share them.
@@ -118,6 +121,7 @@ export default function FeedPage() {
                 key={item.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
+                whileHover={{ y: -2 }}
                 transition={{ delay: index * 0.03 }}
               >
                 <FeedCard item={item} />

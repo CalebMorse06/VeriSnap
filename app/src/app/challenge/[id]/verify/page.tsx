@@ -3,24 +3,21 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, Loader2, AlertCircle, Database, Cpu, Lock, ChevronLeft } from "lucide-react";
-import { getChallenge, updateChallenge } from "@/lib/store/challenges";
-import { TrustBadge, TrustPillars } from "@/components/ui/trust-badge";
+import { AlertCircle, CheckCircle2, ChevronLeft, Eye } from "lucide-react";
+import { getChallenge, saveChallenge, updateChallenge, ChallengeData } from "@/lib/store/challenges";
+import { TrustPillars } from "@/components/ui/trust-badge";
 import { Button } from "@/components/ui/button";
+import { ProofPipeline } from "@/components/animations/ProofPipeline";
+import { ProofReveal } from "@/components/animations/ProofReveal";
 import Link from "next/link";
 
 type VerifyStep = "uploading" | "analyzing" | "resolving" | "complete" | "error";
-
-const steps = [
-  { key: "uploading" as const, label: "Uploading Proof", sublabel: "Private IPFS via Pinata", icon: Database },
-  { key: "analyzing" as const, label: "AI Verification", sublabel: "Gemini 2.0 Flash", icon: Cpu },
-  { key: "resolving" as const, label: "Settlement", sublabel: "XRPL EscrowFinish", icon: Lock },
-];
 
 interface VerificationResult {
   passed: boolean;
   confidence: number;
   reasoning: string;
+  sceneDescription?: string;
   proofCid?: string;
   settlementTx?: string;
   settlementError?: string;
@@ -33,8 +30,35 @@ export default function VerifyPage() {
   const [currentStep, setCurrentStep] = useState<VerifyStep>("uploading");
   const [proofImage, setProofImage] = useState<string | null>(null);
   const [result, setResult] = useState<VerificationResult | null>(null);
+  const [sceneDescription, setSceneDescription] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const verificationStarted = useRef(false);
+
+  // Fetch challenge from server if not in local storage (cross-device)
+  useEffect(() => {
+    const local = getChallenge(challengeId);
+    if (local) return;
+    (async () => {
+      try {
+        const res = await fetch(`/api/challenges/${challengeId}`, { cache: "no-store" });
+        const json = await res.json();
+        if (json.success && json.challenge) {
+          const c = json.challenge;
+          const mapped: ChallengeData = {
+            id: c.id, title: c.title, description: c.description, objective: c.objective,
+            location: { name: c.location_name, lat: c.location_lat, lng: c.location_lng },
+            stakeAmount: c.stake_amount_drops, durationMinutes: c.duration_minutes,
+            creatorAddress: c.escrow_owner || c.creator_id, status: c.status,
+            visibility: c.visibility || "private", createdAt: new Date(c.created_at).getTime(),
+            expiresAt: new Date(c.expires_at).getTime(),
+            escrowTxHash: c.escrow_tx_hash || undefined, escrowSequence: c.escrow_sequence || undefined,
+            escrowOwner: c.escrow_owner || undefined,
+          };
+          saveChallenge(mapped);
+        }
+      } catch (err) { console.warn("[VerifyPage] Server fetch failed:", err); }
+    })();
+  }, [challengeId]);
 
   useEffect(() => {
     if (verificationStarted.current) return;
@@ -88,18 +112,27 @@ export default function VerifyPage() {
         }),
       });
 
-      if (!response.ok) throw new Error("Verification request failed");
+      if (!response.ok) {
+        const errData = await response.json().catch(() => null);
+        throw new Error(errData?.error || `Verification request failed (${response.status})`);
+      }
 
       const data = await response.json();
       if (!data.success) throw new Error(data.error || "Verification failed");
 
+      // Show scene description before resolving
+      const scene = data.sceneDescription || data.verification.sceneDescription || "";
+      if (scene) {
+        setSceneDescription(scene);
+      }
       setCurrentStep("resolving");
-      await new Promise((r) => setTimeout(r, 1000));
+      await new Promise((r) => setTimeout(r, 2000));
 
       const verification: VerificationResult = {
         passed: data.verification.passed,
         confidence: data.verification.confidence,
         reasoning: data.verification.reasoning,
+        sceneDescription: scene,
         proofCid: data.proofCid,
         settlementTx: data.settlementTx,
         settlementError: data.settlementError || undefined,
@@ -118,10 +151,13 @@ export default function VerifyPage() {
         status: nextStatus,
         resolvedAt: Date.now(),
         proofCid: verification.proofCid,
+        visibility: "public",
+        proofRevealed: true,
         verificationResult: {
           passed: verification.passed,
           confidence: verification.confidence,
           reasoning: verification.reasoning,
+          sceneDescription: scene,
         },
         settlementTx: verification.settlementTx,
       });
@@ -137,13 +173,17 @@ export default function VerifyPage() {
     }
   }
 
-  const currentStepIndex = steps.findIndex((s) => s.key === currentStep);
+  const proofRevealState = currentStep === "complete" && result?.passed
+    ? "revealed"
+    : currentStep === "complete"
+    ? "revealing"
+    : "locked";
 
   return (
     <div className="min-h-screen bg-[var(--vs-bg-primary)] flex flex-col">
       {/* Header */}
       <header className="bg-white border-b border-[var(--vs-border)]">
-        <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
+        <div className="max-w-xl mx-auto px-4 py-3 flex items-center gap-3">
           <Link href={`/challenge/${challengeId}`}>
             <Button variant="ghost" size="icon" className="text-[var(--vs-text-secondary)] hover:text-[var(--vs-text-primary)] hover:bg-zinc-100 -ml-2">
               <ChevronLeft className="w-5 h-5" />
@@ -156,19 +196,20 @@ export default function VerifyPage() {
         </div>
       </header>
 
-      <main className="flex-1 max-w-lg mx-auto px-4 py-8 w-full">
-        {/* Proof preview */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="w-32 h-32 rounded-xl overflow-hidden mx-auto mb-8 border border-[var(--vs-border)] shadow-sm relative"
-        >
-          {proofImage ? (
-            <img src={proofImage} alt="Proof" className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full bg-zinc-100 animate-pulse" />
-          )}
-        </motion.div>
+      <main className="flex-1 max-w-xl mx-auto px-4 py-8 w-full">
+        {/* Proof reveal */}
+        {proofImage && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="mb-8 max-w-xs mx-auto"
+          >
+            <ProofReveal imageUrl={proofImage} state={proofRevealState} />
+          </motion.div>
+        )}
+        {!proofImage && (
+          <div className="w-full max-w-xs mx-auto aspect-video rounded-xl bg-zinc-100 animate-pulse mb-8" />
+        )}
 
         {/* Error state */}
         {currentStep === "error" && (
@@ -196,69 +237,30 @@ export default function VerifyPage() {
           </motion.div>
         )}
 
-        {/* Progress steps */}
+        {/* Pipeline */}
         {currentStep !== "error" && (
-          <div className="space-y-3">
-            {steps.map((step, index) => {
-              const isActive = index === currentStepIndex;
-              const isComplete = index < currentStepIndex || currentStep === "complete";
-              const Icon = step.icon;
-
-              return (
-                <motion.div
-                  key={step.key}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className={`p-4 rounded-xl border transition-all ${
-                    isComplete
-                      ? "bg-green-50 border-green-200"
-                      : isActive
-                      ? "bg-white border-emerald-200 shadow-sm"
-                      : "bg-zinc-50 border-zinc-100"
-                  }`}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all ${
-                      isComplete 
-                        ? "bg-green-500" 
-                        : isActive 
-                        ? "bg-emerald-600" 
-                        : "bg-zinc-200"
-                    }`}>
-                      <AnimatePresence mode="wait">
-                        {isActive && !isComplete ? (
-                          <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                            <Loader2 className="w-5 h-5 text-white animate-spin" />
-                          </motion.div>
-                        ) : isComplete ? (
-                          <motion.div key="check" initial={{ scale: 0 }} animate={{ scale: 1 }}>
-                            <CheckCircle2 className="w-5 h-5 text-white" />
-                          </motion.div>
-                        ) : (
-                          <Icon className="w-5 h-5 text-zinc-400" />
-                        )}
-                      </AnimatePresence>
-                    </div>
-
-                    <div className="flex-1">
-                      <p className={`font-medium text-sm ${
-                        isComplete || isActive ? "text-[var(--vs-text-primary)]" : "text-[var(--vs-text-tertiary)]"
-                      }`}>
-                        {step.label}
-                      </p>
-                      <p className={`text-xs ${
-                        isComplete ? "text-green-600" : isActive ? "text-emerald-600" : "text-[var(--vs-text-tertiary)]"
-                      }`}>
-                        {isComplete ? "Complete" : isActive ? "Processing..." : step.sublabel}
-                      </p>
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })}
+          <div className="flex justify-center mb-6">
+            <ProofPipeline currentStep={currentStep} />
           </div>
         )}
+
+        {/* AI Scene Description */}
+        <AnimatePresence>
+          {sceneDescription && currentStep !== "error" && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="mb-6 p-4 rounded-xl bg-indigo-50 border border-indigo-200"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <Eye className="w-4 h-4 text-indigo-600" />
+                <span className="text-xs font-medium text-indigo-700 uppercase tracking-wide">AI sees</span>
+              </div>
+              <p className="text-sm text-indigo-900 italic leading-relaxed">{sceneDescription}</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Result preview */}
         {result && (
@@ -266,8 +268,8 @@ export default function VerifyPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className={`mt-6 p-5 rounded-xl text-center ${
-              result.passed 
-                ? "bg-green-50 border border-green-200" 
+              result.passed
+                ? "bg-green-50 border border-green-200"
                 : "bg-red-50 border border-red-200"
             }`}
           >

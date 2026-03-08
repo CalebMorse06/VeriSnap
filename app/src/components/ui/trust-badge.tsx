@@ -111,17 +111,17 @@ export function TrustPillars({ size = "sm" }: { size?: "sm" | "md" }) {
     <div className="flex items-center justify-center gap-3 text-xs text-zinc-400">
       <span className="flex items-center gap-1">
         <Database className="w-3 h-3" />
-        XRPL
+        XRPL Escrow
       </span>
       <span className="text-zinc-300">•</span>
       <span className="flex items-center gap-1">
         <Lock className="w-3 h-3" />
-        IPFS
+        IPFS Storage
       </span>
       <span className="text-zinc-300">•</span>
       <span className="flex items-center gap-1">
         <Cpu className="w-3 h-3" />
-        AI
+        AI Verification
       </span>
     </div>
   );

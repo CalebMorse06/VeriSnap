@@ -4,12 +4,20 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Wifi, WifiOff, RefreshCw } from "lucide-react";
 
+interface ServiceDetail {
+  ok: boolean;
+  latencyMs: number | null;
+  error?: string;
+}
+
 interface HealthStatus {
   ok: boolean;
-  pinataConfigured: boolean;
-  geminiConfigured: boolean;
-  xrplConfigured: boolean;
-  supabaseConfigured: boolean;
+  services: {
+    xrpl: ServiceDetail;
+    pinata: ServiceDetail;
+    gemini: ServiceDetail;
+    supabase: ServiceDetail;
+  };
 }
 
 export function ServiceStatus({ compact = false }: { compact?: boolean }) {
@@ -36,7 +44,7 @@ export function ServiceStatus({ compact = false }: { compact?: boolean }) {
 
   useEffect(() => {
     checkHealth();
-    const interval = setInterval(checkHealth, 60000); // Check every minute
+    const interval = setInterval(checkHealth, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -59,6 +67,8 @@ export function ServiceStatus({ compact = false }: { compact?: boolean }) {
     );
   }
 
+  const services = status?.services;
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -74,12 +84,12 @@ export function ServiceStatus({ compact = false }: { compact?: boolean }) {
 
       {error ? (
         <p className="text-sm text-red-600">Unable to reach services</p>
-      ) : status ? (
+      ) : services ? (
         <div className="grid grid-cols-2 gap-2 text-xs">
-          <StatusItem label="XRPL" ok={status.xrplConfigured} />
-          <StatusItem label="Pinata" ok={status.pinataConfigured} />
-          <StatusItem label="Gemini" ok={status.geminiConfigured} />
-          <StatusItem label="Database" ok={status.supabaseConfigured} />
+          <StatusItem label="XRPL" detail={services.xrpl} />
+          <StatusItem label="Pinata" detail={services.pinata} />
+          <StatusItem label="Gemini" detail={services.gemini} />
+          <StatusItem label="Database" detail={services.supabase} />
         </div>
       ) : (
         <p className="text-sm text-zinc-500">Checking services...</p>
@@ -88,11 +98,16 @@ export function ServiceStatus({ compact = false }: { compact?: boolean }) {
   );
 }
 
-function StatusItem({ label, ok }: { label: string; ok: boolean }) {
+function StatusItem({ label, detail }: { label: string; detail: ServiceDetail }) {
   return (
     <div className="flex items-center gap-1.5">
-      <span className={`w-2 h-2 rounded-full ${ok ? "bg-green-500" : "bg-red-500"}`} />
-      <span className={ok ? "text-zinc-700" : "text-red-600"}>{label}</span>
+      <span className={`w-2 h-2 rounded-full ${detail.ok ? "bg-green-500" : "bg-red-500"}`} />
+      <span className={detail.ok ? "text-zinc-700" : "text-red-600"}>
+        {label}
+        {detail.ok && detail.latencyMs !== null && (
+          <span className="text-zinc-400 ml-1">{detail.latencyMs}ms</span>
+        )}
+      </span>
     </div>
   );
 }

@@ -101,6 +101,7 @@ export async function POST(request: NextRequest) {
       proofCid: upload.cid,
       proofUrl: upload.privateUrl,
       verification,
+      sceneDescription: verification.sceneDescription || "",
       settlementTx,
       settlementError,
     });

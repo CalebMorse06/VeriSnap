@@ -43,11 +43,16 @@ export async function createEscrow(
   const RIPPLE_EPOCH_OFFSET = 946684800;
   const cancelAfter = cancelAfterUnix - RIPPLE_EPOCH_OFFSET;
 
+  // FinishAfter must be before CancelAfter. Set it to now + 1 second
+  // so the escrow can be finished immediately once verification passes.
+  const finishAfter = Math.floor(Date.now() / 1000) + 1 - RIPPLE_EPOCH_OFFSET;
+
   const escrow = {
     TransactionType: "EscrowCreate" as const,
     Account: creatorWallet.address,
     Destination: destinationAddress,
     Amount: xrpToDrops(amountXRP),
+    FinishAfter: finishAfter,
     CancelAfter: cancelAfter,
     Memos: challengeId ? [{
       Memo: {

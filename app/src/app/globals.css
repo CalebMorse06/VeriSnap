@@ -125,6 +125,21 @@ button:disabled {
   padding-top: max(env(safe-area-inset-top), 1rem);
 }
 
+/* VeriSnap animation keyframes */
+@keyframes vs-pulse-ring {
+  0% { transform: scale(1); opacity: 0.4; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+@keyframes vs-scan-line {
+  0%, 100% { transform: translateY(-100%); }
+  50% { transform: translateY(100%); }
+}
+
+.vs-tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
 /* Prevent iOS zoom on input focus */
 @supports (-webkit-touch-callout: none) {
   input[type="text"],

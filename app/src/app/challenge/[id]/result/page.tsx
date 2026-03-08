@@ -3,11 +3,13 @@
 import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { CheckCircle2, XCircle, Home, ChevronLeft, ExternalLink } from "lucide-react";
+import { CheckCircle2, XCircle, Home, ChevronLeft, ExternalLink, AlertTriangle, Eye, ThumbsUp, ThumbsDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TrustPillars } from "@/components/ui/trust-badge";
-import { AmountDisplay } from "@/components/ui/amount-display";
 import { ShareOptions } from "@/components/challenge/ShareOptions";
+import { SettlementPulse } from "@/components/animations/SettlementPulse";
+import { MoneyFlowVisualization } from "@/components/animations/MoneyFlowVisualization";
+import { ProofReveal } from "@/components/animations/ProofReveal";
 import Link from "next/link";
 import confetti from "canvas-confetti";
 import { getChallenge, updateChallenge, type ChallengeVisibility, type ChallengeData } from "@/lib/store/challenges";
@@ -16,9 +18,22 @@ interface VerificationData {
   passed: boolean;
   confidence: number;
   reasoning: string;
+  sceneDescription?: string;
   proofCid?: string;
   settlementTx?: string;
   settlementError?: string;
+}
+
+interface DisputeData {
+  id: string;
+  ai_reverify_passed: boolean | null;
+  ai_reverify_confidence: number | null;
+  ai_reverify_reasoning: string | null;
+  ai_reverify_scene_description: string | null;
+  votes_pass: number;
+  votes_fail: number;
+  vote_deadline: string;
+  status: string;
 }
 
 export default function ResultPage() {
@@ -29,6 +44,15 @@ export default function ResultPage() {
   const [challenge, setChallenge] = useState<ChallengeData | null>(getChallenge(challengeId));
   const [proofImage, setProofImage] = useState<string | null>(null);
   const [verification, setVerification] = useState<VerificationData | null>(null);
+  const [settlementDone, setSettlementDone] = useState(false);
+  const [proofRevealState, setProofRevealState] = useState<"locked" | "revealing" | "revealed">("locked");
+  const [detailsVisible, setDetailsVisible] = useState(false);
+  const [shareVisible, setShareVisible] = useState(false);
+  const [moneyFlowState, setMoneyFlowState] = useState<"locked" | "settling" | "complete" | "failed">("locked");
+  const [showDisputeForm, setShowDisputeForm] = useState(false);
+  const [disputeReason, setDisputeReason] = useState("");
+  const [disputeLoading, setDisputeLoading] = useState(false);
+  const [dispute, setDispute] = useState<DisputeData | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -68,7 +92,7 @@ export default function ResultPage() {
             },
           });
         }
-      } catch {}
+      } catch (err) { console.warn("[ResultPage] Server fetch failed:", err); }
     })();
 
     updateChallenge(challengeId, { status: "SETTLED" });
@@ -83,6 +107,10 @@ export default function ResultPage() {
     if (verificationResult) {
       setVerification(JSON.parse(verificationResult));
     }
+
+    // Money flow animation sequence
+    setTimeout(() => setMoneyFlowState("settling"), 600);
+    setTimeout(() => setMoneyFlowState(passed ? "complete" : "failed"), 1600);
 
     if (passed) {
       setTimeout(() => {
@@ -105,7 +133,7 @@ export default function ResultPage() {
     <div className="min-h-screen bg-[var(--vs-bg-primary)]">
       {/* Header */}
       <header className="bg-white border-b border-[var(--vs-border)]">
-        <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
+        <div className="max-w-xl mx-auto px-4 py-3 flex items-center gap-3">
           <Link href="/">
             <Button variant="ghost" size="icon" className="text-[var(--vs-text-secondary)] hover:text-[var(--vs-text-primary)] hover:bg-zinc-100 -ml-2">
               <ChevronLeft className="w-5 h-5" />
@@ -118,7 +146,7 @@ export default function ResultPage() {
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto px-4 py-6">
+      <main className="max-w-xl mx-auto px-4 py-6">
         {/* Result hero */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -129,18 +157,18 @@ export default function ResultPage() {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", delay: 0.2 }}
-            className={`w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-4 ${
+            className={`w-[72px] h-[72px] rounded-full mx-auto flex items-center justify-center mb-4 ${
               passed ? "bg-green-500" : "bg-red-500"
             }`}
           >
             {passed ? (
-              <CheckCircle2 className="w-8 h-8 text-white" />
+              <CheckCircle2 className="w-9 h-9 text-white" />
             ) : (
-              <XCircle className="w-8 h-8 text-white" />
+              <XCircle className="w-9 h-9 text-white" />
             )}
           </motion.div>
 
-          <h2 className={`text-xl font-semibold ${passed ? "text-green-700" : "text-red-700"}`}>
+          <h2 className={`text-2xl font-semibold tracking-tight ${passed ? "text-green-700" : "text-red-700"}`}>
             {passed ? "Challenge Passed" : "Challenge Failed"}
           </h2>
           <p className="text-[var(--vs-text-secondary)] text-sm mt-1">
@@ -148,28 +176,37 @@ export default function ResultPage() {
           </p>
         </motion.div>
 
-        {/* Outcome card */}
+        {/* Money flow visualization */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className={`p-5 rounded-xl mb-6 ${
-            passed 
-              ? "bg-green-50 border border-green-200" 
-              : "bg-red-50 border border-red-200"
-          }`}
+          transition={{ delay: 0.3 }}
+          className="mb-4 p-4 rounded-xl bg-white border border-[var(--vs-border)]"
         >
-          <p className={`text-xs font-medium uppercase tracking-wide mb-2 ${
-            passed ? "text-green-600" : "text-red-600"
-          }`}>
-            {passed ? "Escrow Released" : "Stake Forfeited"}
-          </p>
-          <AmountDisplay
-            drops={stakeDrops}
-            variant="large"
-            prefix={passed ? "+" : "-"}
+          <MoneyFlowVisualization
+            flowState={moneyFlowState}
+            amountXrp={stakeDrops / 1_000_000}
+            creatorAddress={challenge?.creatorAddress}
+            winnerAddress={challenge?.acceptorAddress || challenge?.creatorAddress}
+            txHash={settlementTx}
+            compact
           />
         </motion.div>
+
+        {/* Settlement pulse */}
+        <SettlementPulse
+          amountDrops={stakeDrops}
+          passed={passed}
+          onCountComplete={() => {
+            setSettlementDone(true);
+            setProofRevealState("revealing");
+            setTimeout(() => {
+              setProofRevealState("revealed");
+              setDetailsVisible(true);
+              setTimeout(() => setShareVisible(true), 300);
+            }, 800);
+          }}
+        />
 
         {verification?.settlementError && (
           <motion.div
@@ -185,34 +222,46 @@ export default function ResultPage() {
           </motion.div>
         )}
 
-        {/* Proof image */}
+        {/* Proof reveal */}
         {proofImage && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            className="mb-6 rounded-xl overflow-hidden border border-[var(--vs-border)]"
+            animate={{ opacity: settlementDone ? 1 : 0, y: settlementDone ? 0 : 10 }}
+            transition={{ duration: 0.4 }}
+            className="mb-6"
           >
-            <img src={proofImage} alt="Proof" className="w-full aspect-video object-cover" />
+            <ProofReveal imageUrl={proofImage} state={proofRevealState} />
           </motion.div>
         )}
 
         {/* Verification details */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+          animate={{ opacity: detailsVisible ? 1 : 0, y: detailsVisible ? 0 : 10 }}
+          transition={{ duration: 0.4 }}
           className="p-4 rounded-xl bg-white border border-[var(--vs-border)] mb-6"
         >
           <h3 className="text-sm font-medium text-[var(--vs-text-primary)] mb-3">Verification Details</h3>
-          
+
+          {(verification?.sceneDescription || challenge?.verificationResult?.sceneDescription) && (
+            <div className="mb-3 p-3 rounded-lg bg-indigo-50 border border-indigo-200">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Eye className="w-3.5 h-3.5 text-indigo-600" />
+                <span className="text-xs font-medium text-indigo-700">AI Scene Analysis</span>
+              </div>
+              <p className="text-sm text-indigo-900 italic">
+                {verification?.sceneDescription || challenge?.verificationResult?.sceneDescription}
+              </p>
+            </div>
+          )}
+
           <p className="text-sm text-[var(--vs-text-secondary)] mb-4">{reasoning}</p>
 
           <div className="space-y-2 text-xs">
             {proofCid && (
               <div className="flex items-center justify-between py-2 border-t border-[var(--vs-border-subtle)]">
                 <span className="text-[var(--vs-text-tertiary)]">Proof CID</span>
-                <a 
+                <a
                   href={`https://gateway.pinata.cloud/ipfs/${proofCid}`}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -226,7 +275,7 @@ export default function ResultPage() {
             {settlementTx && (
               <div className="flex items-center justify-between py-2 border-t border-[var(--vs-border-subtle)]">
                 <span className="text-[var(--vs-text-tertiary)]">Settlement TX</span>
-                <a 
+                <a
                   href={`https://testnet.xrpl.org/transactions/${settlementTx}`}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -243,8 +292,8 @@ export default function ResultPage() {
         {/* Share options */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
+          animate={{ opacity: shareVisible ? 1 : 0, y: shareVisible ? 0 : 10 }}
+          transition={{ duration: 0.4 }}
           className="mb-6"
         >
           <ShareOptions
@@ -257,12 +306,126 @@ export default function ResultPage() {
           />
         </motion.div>
 
+        {/* Dispute system — only on fail */}
+        {!passed && shareVisible && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="mb-6"
+          >
+            {!dispute && !showDisputeForm && (
+              <Button
+                variant="outline"
+                className="w-full h-11 gap-2 rounded-lg border-amber-300 text-amber-700 hover:bg-amber-50"
+                onClick={() => setShowDisputeForm(true)}
+              >
+                <AlertTriangle className="w-4 h-4" />
+                Dispute Result
+              </Button>
+            )}
+
+            {showDisputeForm && !dispute && (
+              <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 space-y-3">
+                <p className="text-sm font-medium text-amber-900">Why do you think this result is wrong?</p>
+                <input
+                  type="text"
+                  placeholder="Optional: describe why this should pass..."
+                  value={disputeReason}
+                  onChange={(e) => setDisputeReason(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-amber-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                />
+                <Button
+                  className="w-full h-10 bg-amber-600 hover:bg-amber-700 text-white font-medium"
+                  disabled={disputeLoading}
+                  onClick={async () => {
+                    setDisputeLoading(true);
+                    try {
+                      const res = await fetch("/api/disputes", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          challengeId,
+                          reason: disputeReason || "I believe this result is incorrect",
+                        }),
+                      });
+                      const data = await res.json();
+                      if (data.success && data.dispute) {
+                        setDispute(data.dispute);
+                        updateChallenge(challengeId, { status: "DISPUTED" });
+                        setChallenge((prev) => prev ? { ...prev, status: "DISPUTED" } : prev);
+                      }
+                    } catch (err) { console.warn("[ResultPage] Dispute submit failed:", err); }
+                    setDisputeLoading(false);
+                  }}
+                >
+                  {disputeLoading ? "Re-verifying..." : "Submit Dispute"}
+                </Button>
+              </div>
+            )}
+
+            {dispute && (
+              <div className="p-4 rounded-xl bg-white border border-[var(--vs-border)] space-y-3">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-600" />
+                  <span className="text-sm font-medium text-[var(--vs-text-primary)]">Dispute Filed</span>
+                  <span className={`ml-auto px-2 py-0.5 rounded-full text-xs font-medium ${
+                    dispute.status === "resolved_pass" ? "bg-green-100 text-green-700" :
+                    dispute.status === "resolved_fail" ? "bg-red-100 text-red-700" :
+                    "bg-amber-100 text-amber-700"
+                  }`}>
+                    {dispute.status === "resolved_pass" ? "Upheld" :
+                     dispute.status === "resolved_fail" ? "Denied" : "Open"}
+                  </span>
+                </div>
+
+                {dispute.ai_reverify_passed !== null && (
+                  <div className={`p-3 rounded-lg ${dispute.ai_reverify_passed ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"}`}>
+                    <p className="text-xs font-medium mb-1 text-zinc-600">AI Re-verification</p>
+                    <p className={`text-sm font-medium ${dispute.ai_reverify_passed ? "text-green-700" : "text-red-700"}`}>
+                      {dispute.ai_reverify_passed ? "Passed" : "Failed"} ({dispute.ai_reverify_confidence}% confidence)
+                    </p>
+                    {dispute.ai_reverify_scene_description && (
+                      <p className="text-xs text-zinc-600 italic mt-1">{dispute.ai_reverify_scene_description}</p>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-[var(--vs-text-tertiary)]">Community Vote</span>
+                  <div className="flex items-center gap-3">
+                    <span className="flex items-center gap-1 text-green-600">
+                      <ThumbsUp className="w-3.5 h-3.5" /> {dispute.votes_pass}
+                    </span>
+                    <span className="flex items-center gap-1 text-red-600">
+                      <ThumbsDown className="w-3.5 h-3.5" /> {dispute.votes_fail}
+                    </span>
+                  </div>
+                </div>
+
+                {dispute.vote_deadline && (
+                  <p className="text-xs text-[var(--vs-text-tertiary)]">
+                    Voting ends: {new Date(dispute.vote_deadline).toLocaleString()}
+                  </p>
+                )}
+              </div>
+            )}
+          </motion.div>
+        )}
+
         {/* Home button */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
+          animate={{ opacity: shareVisible ? 1 : 0, y: shareVisible ? 0 : 10 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="space-y-3"
         >
+          <Link href="/disputes">
+            <Button variant="outline" className="w-full h-11 gap-2 rounded-lg border-[var(--vs-border)] text-[var(--vs-text-secondary)]">
+              <AlertTriangle className="w-4 h-4" />
+              View Community Disputes
+            </Button>
+          </Link>
           <Link href="/">
             <Button className="w-full h-12 gap-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white font-medium">
               <Home className="w-4 h-4" />

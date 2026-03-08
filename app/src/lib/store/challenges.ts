@@ -12,7 +12,10 @@ export interface ChallengeData {
   stakeAmount: number; // in drops
   durationMinutes: number;
   creatorAddress: string;
-  status: "DRAFT" | "FUNDED" | "ACCEPTED" | "PROOF_SUBMITTED" | "VERIFYING" | "PASSED" | "FAILED" | "SETTLED" | "EXPIRED";
+  challengeMode?: "self" | "versus";
+  opponentAddress?: string;
+  acceptorAddress?: string;
+  status: "DRAFT" | "FUNDED" | "ACCEPTED" | "PROOF_SUBMITTED" | "VERIFYING" | "PASSED" | "FAILED" | "SETTLED" | "EXPIRED" | "DISPUTED";
   visibility: ChallengeVisibility;
   createdAt: number;
   expiresAt: number;
@@ -28,6 +31,7 @@ export interface ChallengeData {
     passed: boolean;
     confidence: number;
     reasoning: string;
+    sceneDescription?: string;
   };
   settlementTx?: string;
 }
@@ -63,8 +67,8 @@ export function getChallenges(): ChallengeData[] {
       const ids = new Set(parsed.map(c => c.id));
       return [...parsed, ...DEMO_CHALLENGES.filter(c => !ids.has(c.id))];
     }
-  } catch {}
-  
+  } catch (err) { console.warn("[Store] Failed to read challenges:", err); }
+
   return DEMO_CHALLENGES;
 }
 
@@ -81,24 +85,54 @@ export function saveChallenge(challenge: ChallengeData): void {
   sessionStorage.setItem(STORAGE_KEY, JSON.stringify(challenges));
 }
 
+function dispatchSyncEvent(ok: boolean) {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("verisnap:sync", { detail: { ok } }));
+  }
+}
+
 async function mirrorCreateToApi(challenge: ChallengeData) {
-  try {
-    await fetch("/api/challenges", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(challenge),
-    });
-  } catch {}
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const res = await fetch("/api/challenges", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(challenge),
+      });
+      if (res.ok) {
+        console.log("[Mirror] Created challenge synced:", challenge.id);
+        dispatchSyncEvent(true);
+        return;
+      }
+      console.warn(`[Mirror] Create sync attempt ${attempt} failed: ${res.status}`);
+    } catch (err) {
+      console.warn(`[Mirror] Create sync attempt ${attempt} error:`, err);
+    }
+    if (attempt < 2) await new Promise(r => setTimeout(r, 2000));
+  }
+  dispatchSyncEvent(false);
 }
 
 async function mirrorPatchToApi(id: string, updates: Partial<ChallengeData>) {
-  try {
-    await fetch(`/api/challenges/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updates),
-    });
-  } catch {}
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const res = await fetch(`/api/challenges/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+      if (res.ok) {
+        console.log("[Mirror] Patch synced:", id);
+        dispatchSyncEvent(true);
+        return;
+      }
+      console.warn(`[Mirror] Patch sync attempt ${attempt} failed: ${res.status}`);
+    } catch (err) {
+      console.warn(`[Mirror] Patch sync attempt ${attempt} error:`, err);
+    }
+    if (attempt < 2) await new Promise(r => setTimeout(r, 2000));
+  }
+  dispatchSyncEvent(false);
 }
 
 export function updateChallenge(id: string, updates: Partial<ChallengeData>): ChallengeData | null {
@@ -111,12 +145,13 @@ export function updateChallenge(id: string, updates: Partial<ChallengeData>): Ch
   return updated;
 }
 
-export function createChallenge(data: Omit<ChallengeData, "id" | "status" | "createdAt" | "expiresAt" | "visibility">): ChallengeData {
+export function createChallenge(data: Omit<ChallengeData, "id" | "status" | "createdAt" | "expiresAt" | "visibility"> & { challengeMode?: "self" | "versus" }): ChallengeData {
   const challenge: ChallengeData = {
     ...data,
     id: `challenge-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
     status: "FUNDED",
-    visibility: "private", // Default to private
+    visibility: "private",
+    challengeMode: data.challengeMode || "versus",
     createdAt: Date.now(),
     expiresAt: Date.now() + 86400000, // 24 hours
   };
