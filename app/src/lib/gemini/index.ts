@@ -39,8 +39,15 @@ ${challengeContext ? `## ADDITIONAL CONTEXT\n${challengeContext}\n` : ""}
 
 ## YOUR TASK
 Analyze the submitted ${isVideo ? "video" : "photo"} and determine if the user has reasonably completed the challenge objective.${isVideo ? `
-For video proof, assess the actions performed over time — look for the activity being completed, not just a single frame.
-If the objective involves counting repetitions (e.g., pushups, squats, jumps), COUNT the number of reps you observe and include the count in your reasoning (e.g., "I counted approximately 8 pushups").` : ""}
+
+## VIDEO-SPECIFIC RULES
+- Assess the EFFORT and INTENT, not perfection. A clumsy dance is still a dance. A slow jog is still a jog.
+- If the user is visibly attempting the activity, that counts as completion.
+- Do NOT evaluate based on skill level or quality of performance.
+- Do NOT mention or look for timers, counters, or UI overlays — these are not part of the proof.
+- If the objective specifies a duration (e.g., "dance for 5 seconds", "plank for 30 seconds"), estimate whether the video shows the activity for approximately that long. Be lenient — if it's close, pass it.
+- If the objective involves counting repetitions (e.g., pushups, squats, jumps), COUNT the number of reps you observe and include the count in your reasoning (e.g., "I counted approximately 8 pushups").
+- When in doubt, PASS. This is a fun challenge app.` : ""}
 
 You are verifying for a fun challenge app, not a court of law. If the user appears to be genuinely attempting the challenge, lean toward passing.
 
@@ -55,7 +62,7 @@ You are verifying for a fun challenge app, not a court of law. If the user appea
 - Confidence should reflect certainty (70+ for reasonable matches, 50-70 for borderline)
 
 ## SCENE DESCRIPTION
-You MUST also describe what you see in the photo in 1-2 sentences. Be specific about objects, people, and actions visible.
+You MUST also describe what you see in the ${isVideo ? "video" : "photo"} in 1-2 sentences. Be specific about objects, people, and actions visible.
 
 Respond with JSON: {"passed": boolean, "confidence": number, "reasoning": string, "sceneDescription": string, "fraudIndicators": string[], "objectiveMatches": string[]}`;
 

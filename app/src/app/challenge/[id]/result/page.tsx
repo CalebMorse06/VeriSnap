@@ -107,7 +107,16 @@ export default function ResultPage() {
     const proofData = sessionStorage.getItem("proofData");
     if (proofData) {
       const parsed = JSON.parse(proofData);
-      setProofImage(parsed.imageData);
+      // For video, imageData may not be in sessionStorage (too large) — check module-level ref
+      let mediaData = parsed.imageData;
+      if (!mediaData) {
+        try {
+          const { getProofMediaData, clearProofMediaData } = require("@/app/challenge/[id]/capture/page");
+          mediaData = getProofMediaData();
+          if (mediaData) clearProofMediaData();
+        } catch {}
+      }
+      if (mediaData) setProofImage(mediaData);
       if (parsed.type === "video") setProofType("video");
     }
 

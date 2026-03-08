@@ -70,6 +70,30 @@ export default function ChallengePage() {
     return () => { mounted = false; };
   }, [challengeId]);
 
+  // Poll for status updates (creator waiting for acceptance, then waiting for proof)
+  useEffect(() => {
+    if (!challenge || challenge.challengeMode === "self") return;
+    // Poll while FUNDED (waiting for accept), ACCEPTED (waiting for proof), or VERIFYING
+    const pollStatuses = ["FUNDED", "ACCEPTED", "PROOF_SUBMITTED", "VERIFYING"];
+    if (!pollStatuses.includes(challenge.status)) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/challenges/${challengeId}`, { cache: "no-store" });
+        const json = await res.json();
+        if (json.success && json.challenge?.status !== challenge.status) {
+          setChallenge(prev => prev ? {
+            ...prev,
+            status: json.challenge.status,
+            acceptorAddress: json.challenge.acceptor_address || undefined,
+          } : prev);
+        }
+      } catch (err) {
+        console.warn("[ChallengePage] Poll failed:", err);
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [challenge?.status, challenge?.challengeMode, challengeId]);
+
   // Self-challenge countdown timer
   useEffect(() => {
     if (!selfStarted || timeRemaining === null) return;
@@ -107,7 +131,12 @@ export default function ChallengePage() {
 
   const isSelfChallenge = challenge?.challengeMode === "self";
   const isBounty = challenge?.challengeMode === "bounty";
-  const isCreator = wallet.address && challenge?.creatorAddress === wallet.address;
+  // Check creator via wallet match OR local store (covers case where server stores app wallet as escrow_owner)
+  const localChallenge = getChallenge(challengeId);
+  const isCreator = !!(
+    (wallet.address && challenge?.creatorAddress === wallet.address) ||
+    (wallet.address && localChallenge?.creatorAddress === wallet.address)
+  );
 
   if (loading) {
     return (
@@ -152,8 +181,21 @@ export default function ChallengePage() {
           </Link>
           <div className="flex-1 min-w-0 flex items-center gap-2">
             <h1 className="text-lg font-semibold text-[var(--vs-text-primary)] truncate">{challenge.title}</h1>
-            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
-              {challenge.status === "FUNDED" ? "Open" : challenge.status}
+            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+              challenge.status === "FUNDED" ? "bg-emerald-100 text-emerald-700" :
+              challenge.status === "ACCEPTED" ? "bg-amber-100 text-amber-700" :
+              challenge.status === "VERIFYING" || challenge.status === "PROOF_SUBMITTED" ? "bg-blue-100 text-blue-700" :
+              challenge.status === "PASSED" || challenge.status === "SETTLED" ? "bg-emerald-100 text-emerald-700" :
+              challenge.status === "FAILED" ? "bg-red-100 text-red-700" :
+              "bg-zinc-100 text-zinc-700"
+            }`}>
+              {challenge.status === "FUNDED" ? "Open" :
+               challenge.status === "ACCEPTED" ? "In Progress" :
+               challenge.status === "PROOF_SUBMITTED" ? "Verifying" :
+               challenge.status === "VERIFYING" ? "Verifying" :
+               challenge.status === "PASSED" || challenge.status === "SETTLED" ? "Completed" :
+               challenge.status === "FAILED" ? "Failed" :
+               challenge.status}
             </span>
           </div>
           <div className="text-right">
@@ -441,7 +483,34 @@ export default function ChallengePage() {
             </div>
           )}
 
-          {!isSelfChallenge && isCreator && (
+          {/* Challenge accepted — creator waits, acceptor captures */}
+          {!isSelfChallenge && challenge.status === "ACCEPTED" && isCreator && (
+            <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-center space-y-2">
+              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center mx-auto">
+                <Clock className="w-5 h-5 text-amber-600" />
+              </div>
+              <p className="text-sm font-medium text-[var(--vs-text-primary)]">Challenge accepted!</p>
+              <p className="text-xs text-[var(--vs-text-tertiary)]">
+                Waiting for {challenge.acceptorAddress
+                  ? `${challenge.acceptorAddress.slice(0, 6)}...${challenge.acceptorAddress.slice(-4)}`
+                  : "your opponent"} to complete the challenge and submit proof.
+              </p>
+            </div>
+          )}
+
+          {!isSelfChallenge && challenge.status === "ACCEPTED" && !isCreator && (
+            <Button
+              size="lg"
+              className="w-full h-14 gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-lg"
+              onClick={() => router.push(`/challenge/${challengeId}/capture`)}
+            >
+              <Camera className="w-5 h-5" />
+              Capture Proof
+            </Button>
+          )}
+
+          {/* Creator waiting for opponent */}
+          {!isSelfChallenge && isCreator && challenge.status === "FUNDED" && (
             <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200 text-center space-y-2">
               <p className="text-sm font-medium text-[var(--vs-text-primary)]">Waiting for opponent</p>
               <p className="text-xs text-[var(--vs-text-tertiary)]">
@@ -450,7 +519,8 @@ export default function ChallengePage() {
             </div>
           )}
 
-          {!isSelfChallenge && !isCreator && (
+          {/* Non-creator can accept */}
+          {!isSelfChallenge && !isCreator && challenge.status === "FUNDED" && (
             <>
               <Button
                 size="lg"
@@ -477,6 +547,63 @@ export default function ChallengePage() {
                 {xrpAmount} XRP will be locked in XRPL escrow
               </p>
             </>
+          )}
+
+          {/* Verifying state */}
+          {(challenge.status === "PROOF_SUBMITTED" || challenge.status === "VERIFYING") && (
+            <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 text-center space-y-2">
+              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mx-auto animate-pulse">
+                <Camera className="w-5 h-5 text-blue-600" />
+              </div>
+              <p className="text-sm font-medium text-[var(--vs-text-primary)]">Proof submitted — verifying...</p>
+              <p className="text-xs text-[var(--vs-text-tertiary)]">
+                AI is reviewing the proof. This page will update automatically.
+              </p>
+            </div>
+          )}
+
+          {/* Completed — passed */}
+          {(challenge.status === "PASSED" || challenge.status === "SETTLED") && (
+            <div className="space-y-3">
+              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-center space-y-2">
+                <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center mx-auto">
+                  <Check className="w-5 h-5 text-emerald-600" />
+                </div>
+                <p className="text-sm font-medium text-emerald-800">Challenge completed!</p>
+                <p className="text-xs text-[var(--vs-text-tertiary)]">
+                  Proof was verified and {xrpAmount} XRP has been released.
+                </p>
+              </div>
+              <Button
+                size="lg"
+                className="w-full h-12 gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+                onClick={() => router.push(`/challenge/${challengeId}/result?passed=true`)}
+              >
+                View Results
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
+
+          {/* Failed */}
+          {challenge.status === "FAILED" && (
+            <div className="space-y-3">
+              <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-center space-y-2">
+                <p className="text-sm font-medium text-red-800">Challenge failed</p>
+                <p className="text-xs text-[var(--vs-text-tertiary)]">
+                  The proof did not meet the verification criteria.
+                </p>
+              </div>
+              <Button
+                size="lg"
+                variant="outline"
+                className="w-full h-12 gap-2 rounded-xl border-[var(--vs-border)] font-medium"
+                onClick={() => router.push(`/challenge/${challengeId}/result?passed=false`)}
+              >
+                View Results
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </div>
           )}
         </motion.section>
 

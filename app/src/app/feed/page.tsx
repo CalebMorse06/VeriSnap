@@ -165,6 +165,7 @@ function FeedCard({ item }: { item: FeedItem }) {
               src={proofUrl}
               alt="Challenge proof"
               className="w-full h-full object-cover"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
             />
           )}
           {/* Outcome badge - top right */}

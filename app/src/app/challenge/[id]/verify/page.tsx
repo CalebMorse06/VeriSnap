@@ -5,6 +5,7 @@ import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertCircle, CheckCircle2, ChevronLeft, Eye } from "lucide-react";
 import { getChallenge, saveChallenge, updateChallenge, ChallengeData } from "@/lib/store/challenges";
+import { getProofMediaData, clearProofMediaData } from "@/app/challenge/[id]/capture/page";
 import { useWallet } from "@/lib/wallet-context";
 import { TrustPillars } from "@/components/ui/trust-badge";
 import { Button } from "@/components/ui/button";
@@ -77,16 +78,29 @@ export default function VerifyPage() {
 
     const parsed = JSON.parse(proofData) as {
       challengeId: string;
-      imageData: string;
+      imageData?: string;
       capturedAt?: number;
       acceptedAt?: number;
       type?: "photo" | "video";
     };
+    // For video, imageData may not be in sessionStorage (too large) — use module-level ref
+    if (!parsed.imageData) {
+      const moduleData = getProofMediaData();
+      if (moduleData) {
+        parsed.imageData = moduleData;
+        clearProofMediaData();
+      }
+    }
+    if (!parsed.imageData) {
+      setError("No proof media data found");
+      setCurrentStep("error");
+      return;
+    }
     setProofImage(parsed.imageData);
     setProofType(parsed.type || "photo");
 
     updateChallenge(challengeId, { status: "VERIFYING" });
-    runVerification(parsed);
+    runVerification(parsed as { challengeId: string; imageData: string; capturedAt?: number; acceptedAt?: number; type?: "photo" | "video" });
   }, [challengeId]);
 
   async function runVerification(proofData: {

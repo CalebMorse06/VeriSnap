@@ -134,6 +134,28 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Update challenge status in DB
+    try {
+      const { getSupabaseAdmin } = await import("@/lib/supabase");
+      const supabase = getSupabaseAdmin();
+      if (supabase) {
+        const finalStatus = verification.passed ? (settlementTx ? "SETTLED" : "PASSED") : "FAILED";
+        await supabase.from("challenges").update({
+          status: finalStatus,
+          proof_cid: upload.cid,
+          verification_passed: verification.passed,
+          verification_confidence: verification.confidence,
+          verification_reasoning: verification.reasoning,
+          proof_revealed: true,
+          proof_media_type: mediaType,
+          ...(settlementTx ? { settlement_tx: settlementTx } : {}),
+          resolved_at: new Date().toISOString(),
+        }).eq("id", challengeId);
+      }
+    } catch (err) {
+      console.warn("[Verify] Failed to update challenge status in DB:", err);
+    }
+
     return NextResponse.json({
       success: true,
       proofCid: upload.cid,

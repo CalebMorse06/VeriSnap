@@ -108,7 +108,7 @@ export default function AcceptChallengePage() {
         "challengeAccepted",
         JSON.stringify({ challengeId: id, acceptedAt, expiresAt })
       );
-      updateChallenge(id, { status: "ACCEPTED", acceptedAt, acceptorAddress: wallet.address || "rAcceptorDemo" });
+      updateChallenge(id, { status: "ACCEPTED", acceptedAt, acceptorAddress: wallet.address || "" });
       setTimeRemaining(challenge.durationMinutes * 60);
     }, 2500);
   };

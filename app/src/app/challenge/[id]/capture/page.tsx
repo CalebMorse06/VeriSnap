@@ -11,6 +11,11 @@ import { validateProofImage } from "@/lib/proof-validation";
 
 type CaptureState = "initializing" | "ready" | "countdown" | "captured" | "error";
 
+// Module-level store for large proof data (video base64 can exceed sessionStorage limits)
+let __proofMediaData: string | null = null;
+export function getProofMediaData() { return __proofMediaData; }
+export function clearProofMediaData() { __proofMediaData = null; }
+
 export default function CapturePage() {
   const params = useParams();
   const router = useRouter();
@@ -95,8 +100,8 @@ export default function CapturePage() {
       const constraints: MediaStreamConstraints = {
         video: {
           facingMode: facingMode,
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
+          width: { ideal: mode === "video" ? 640 : 1920 },
+          height: { ideal: mode === "video" ? 480 : 1080 },
         },
         audio: false,
       };
@@ -116,7 +121,7 @@ export default function CapturePage() {
       setError("Could not access camera. Please grant permission.");
       setState("error");
     }
-  }, [facingMode]);
+  }, [facingMode, mode]);
 
   useEffect(() => {
     startCamera();
@@ -218,10 +223,10 @@ export default function CapturePage() {
       setRecordingTime(prev => prev + 1);
     }, 1000);
 
-    // Auto-stop after 15s
+    // Auto-stop after 10 minutes
     setTimeout(() => {
       if (mediaRecorderRef.current?.state === "recording") stopRecording();
-    }, 15000);
+    }, 10 * 60 * 1000);
   };
 
   const stopRecording = () => {
@@ -271,16 +276,19 @@ export default function CapturePage() {
       }
     }
 
-    // Store proof data with timestamps
+    // Store proof data — use module-level variable for large media (video),
+    // and only store metadata in sessionStorage to avoid exceeding its ~5MB limit.
     const acceptedData = sessionStorage.getItem("challengeAccepted");
     const acceptedAt = acceptedData ? JSON.parse(acceptedData).acceptedAt : undefined;
 
+    __proofMediaData = proofMedia;
     sessionStorage.setItem("proofData", JSON.stringify({
       challengeId,
-      imageData: proofMedia,
       capturedAt,
       acceptedAt,
       type: mode,
+      // Only store image inline if it's a photo (small enough); video uses module-level ref
+      ...(mode === "photo" ? { imageData: proofMedia } : {}),
     }));
 
     updateChallenge(challengeId, { status: "PROOF_SUBMITTED" });
@@ -463,7 +471,7 @@ export default function CapturePage() {
               <div className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 border-white rounded-bl-lg" />
               <div className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-white rounded-br-lg" />
             </div>
-            <div className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-zinc-900/80 backdrop-blur-sm px-4 py-2 rounded-lg max-w-xl">
+            <div className="absolute bottom-32 left-1/2 -translate-x-1/2 bg-zinc-900/80 backdrop-blur-sm px-4 py-2 rounded-lg max-w-xl">
               <p className="text-white text-base font-medium">
                 {challenge?.objective || "Frame your proof clearly"}
               </p>
@@ -483,27 +491,27 @@ export default function CapturePage() {
 
         {/* Photo/Video mode toggle */}
         {state === "ready" && !isExpired && !recording && (
-          <div className="flex items-center justify-center gap-1 mb-4">
+          <div className="flex items-center justify-center gap-1 mb-5">
             <button
               onClick={() => setMode("photo")}
-              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              className={`flex items-center gap-1.5 px-5 py-2.5 rounded-full text-sm font-medium transition-colors ${
                 mode === "photo"
                   ? "bg-white text-zinc-900"
                   : "bg-zinc-800 text-zinc-400 hover:text-white"
               }`}
             >
-              <Camera className="w-3.5 h-3.5" />
+              <Camera className="w-4 h-4" />
               Photo
             </button>
             <button
               onClick={() => setMode("video")}
-              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              className={`flex items-center gap-1.5 px-5 py-2.5 rounded-full text-sm font-medium transition-colors ${
                 mode === "video"
                   ? "bg-white text-zinc-900"
                   : "bg-zinc-800 text-zinc-400 hover:text-white"
               }`}
             >
-              <Video className="w-3.5 h-3.5" />
+              <Video className="w-4 h-4" />
               Video
             </button>
           </div>
